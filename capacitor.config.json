@@ -1,0 +1,16 @@
+{
+  "appId": "app.lovable.8e42f8265e1840c4bf9945b222b02529",
+  "appName": "stride-map-run",
+  "webDir": "dist",
+  "server": {
+    "url": "https://8e42f826-5e18-40c4-bf99-45b222b02529.lovableproject.com?forceHideBadge=true",
+    "cleartext": true
+  },
+  "plugins": {
+    "Geolocation": {
+      "requestPermissions": {
+        "permissions": ["location", "coarseLocation"]
+      }
+    }
+  }
+}
