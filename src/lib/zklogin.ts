@@ -4,12 +4,12 @@ import {
   getExtendedEphemeralPublicKey,
   getZkLoginSignature,
   genAddressSeed,
-  getZkLoginAddress
 } from '@mysten/zklogin';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 import { jwtToAddress } from '@mysten/zklogin';
 import { suiClient } from './sui-config';
 import { toast } from 'sonner';
+import { toB64 } from '@mysten/sui.js/utils';
 
 const REDIRECT_URI = window.location.origin;
 const PROVER_URL = 'https://prover-dev.mystenlabs.com/v1';
@@ -26,15 +26,14 @@ export interface ZkLoginState {
 export async function initializeZkLogin(): Promise<ZkLoginState> {
   const ephemeralKeypair = new Ed25519Keypair();
   const randomness = generateRandomness();
-  const nonce = generateNonce(
-    ephemeralKeypair.getPublicKey(),
-    Date.now(),
-    randomness
-  );
-  
-  // Get current epoch from Sui
   const { epoch } = await suiClient.getLatestSuiSystemState();
   const maxEpoch = Number(epoch) + 10; // Valid for 10 epochs
+  
+  const nonce = generateNonce(
+    ephemeralKeypair.getPublicKey().toBase64(),
+    maxEpoch,
+    randomness
+  );
   
   // Store in session storage
   sessionStorage.setItem('zklogin_ephemeral_keypair', ephemeralKeypair.export().privateKey);
@@ -57,7 +56,7 @@ export async function loginWithGoogle(): Promise<void> {
     
     // Google OAuth URL
     const params = new URLSearchParams({
-      client_id: process.env.VITE_GOOGLE_CLIENT_ID || '',
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
       redirect_uri: REDIRECT_URI,
       response_type: 'id_token',
       scope: 'openid email profile',
@@ -105,12 +104,8 @@ export async function handleOAuthCallback(): Promise<string | null> {
     
     const { salt } = await saltResponse.json();
     
-    // Generate zkLogin address
-    const zkLoginAddress = getZkLoginAddress({
-      jwt: idToken,
-      salt,
-      ephemeralPublicKey: ephemeralKeypair.getPublicKey()
-    });
+    // Generate zkLogin address using jwtToAddress
+    const zkLoginAddress = jwtToAddress(idToken, salt);
     
     // Store auth data
     localStorage.setItem('sui_address', zkLoginAddress);
@@ -129,7 +124,7 @@ export async function handleOAuthCallback(): Promise<string | null> {
 }
 
 // Get zkLogin signature for transaction
-export async function getZkLoginSig(txBytes: Uint8Array): Promise<any> {
+export async function getZkLoginSig(txBytes: Uint8Array): Promise<string> {
   const idToken = localStorage.getItem('id_token');
   const salt = localStorage.getItem('zklogin_salt');
   const ephemeralPrivateKey = sessionStorage.getItem('zklogin_ephemeral_keypair');
@@ -151,7 +146,7 @@ export async function getZkLoginSig(txBytes: Uint8Array): Promise<any> {
     body: JSON.stringify({
       jwt: idToken,
       extendedEphemeralPublicKey: getExtendedEphemeralPublicKey(
-        ephemeralKeypair.getPublicKey()
+        ephemeralKeypair.getPublicKey().toBase64()
       ),
       maxEpoch: Number(maxEpoch),
       jwtRandomness: randomness,
@@ -161,11 +156,14 @@ export async function getZkLoginSig(txBytes: Uint8Array): Promise<any> {
   
   const proof = await proofResponse.json();
   
+  // Sign the transaction bytes
+  const userSignature = await ephemeralKeypair.signPersonalMessage(txBytes);
+  
   // Generate zkLogin signature
   const signature = getZkLoginSignature({
     inputs: proof,
     maxEpoch: Number(maxEpoch),
-    userSignature: await ephemeralKeypair.signPersonalMessage(txBytes),
+    userSignature: toB64(userSignature.signature),
   });
   
   return signature;

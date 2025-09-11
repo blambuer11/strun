@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, Battery, Radio, Navigation, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { OpenStreetMap } from "./OpenStreetMap";
+import { claimTerritory } from "@/lib/sui-transactions";
+import { toast } from "sonner";
 
 interface MapViewProps {
   isRunning: boolean;
@@ -28,27 +31,40 @@ export function MapView({
   runningStats = { distance: 0, time: "00:00", pace: 0 }
 }: MapViewProps) {
   const [showRentModal, setShowRentModal] = useState(false);
-  const [userPosition, setUserPosition] = useState({ x: 50, y: 50 });
-  const mapRef = useRef<HTMLDivElement>(null);
+  const [territories, setTerritories] = useState<any[]>([]);
+  const [canClaim, setCanClaim] = useState(false);
+  const [territoryPath, setTerritoryPath] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [territoryArea, setTerritoryArea] = useState(0);
 
-  useEffect(() => {
-    if (isRunning) {
-      const interval = setInterval(() => {
-        setUserPosition(prev => ({
-          x: Math.min(100, Math.max(0, prev.x + (Math.random() - 0.5) * 5)),
-          y: Math.min(100, Math.max(0, prev.y + (Math.random() - 0.5) * 5))
-        }));
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [isRunning]);
+  const handleTerritoryComplete = (area: number, path: Array<{ lat: number; lng: number }>) => {
+    setCanClaim(true);
+    setTerritoryArea(area);
+    setTerritoryPath(path);
+    toast.success(`Territory ready to claim! Area: ${(area / 10000).toFixed(2)} hectares`);
+  };
 
-  // Simulate entering a territory
-  useEffect(() => {
-    if (isRunning && Math.random() > 0.95) {
-      setShowRentModal(true);
+  const handleClaimTerritory = async () => {
+    if (!canClaim || !isRunning) return;
+    
+    try {
+      const territoryName = prompt("Name your territory:") || "My Territory";
+      const rentPrice = Math.floor(territoryArea / 100); // 1 XP per 100m²
+      
+      await claimTerritory({
+        name: territoryName,
+        coordinates: territoryPath,
+        area: territoryArea,
+        rentPrice,
+      });
+      
+      toast.success(`Territory "${territoryName}" claimed! You earned ${Math.floor(territoryArea / 10)} XP!`);
+      setCanClaim(false);
+      onStopRun();
+    } catch (error) {
+      console.error("Failed to claim territory:", error);
+      toast.error("Failed to claim territory. Please try again.");
     }
-  }, [userPosition, isRunning]);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -81,53 +97,12 @@ export function MapView({
       </div>
 
       {/* Map Area */}
-      <div 
-        ref={mapRef}
-        className="flex-1 relative bg-gradient-to-br from-blue-950/50 to-purple-950/50 map-grid overflow-hidden"
-      >
-        {/* User Marker */}
-        <motion.div
-          animate={{
-            left: `${userPosition.x}%`,
-            top: `${userPosition.y}%`,
-          }}
-          transition={{ type: "spring", stiffness: 100 }}
-          className="absolute w-5 h-5 -translate-x-1/2 -translate-y-1/2 z-20"
-        >
-          <div className="w-full h-full bg-accent rounded-full border-2 border-white shadow-lg animate-pulse-ring">
-            <Navigation className="w-3 h-3 text-white absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-          </div>
-        </motion.div>
-
-        {/* Territories */}
-        <div className="absolute top-[20%] left-[15%] w-24 h-20 border-2 border-primary/50 bg-primary/20 rounded-lg flex items-center justify-center">
-          <MapPin className="w-4 h-4 text-primary" />
-        </div>
-        <div className="absolute top-[60%] right-[20%] w-20 h-20 border-2 border-accent/50 bg-accent/20 rounded-lg flex items-center justify-center">
-          <MapPin className="w-4 h-4 text-accent" />
-        </div>
-
-        {/* Running Path */}
-        {isRunning && (
-          <svg className="absolute inset-0 w-full h-full pointer-events-none">
-            <motion.path
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 5, repeat: Infinity }}
-              d={`M ${userPosition.x * 3.2} ${userPosition.y * 6.4} Q ${(userPosition.x + 20) * 3.2} ${(userPosition.y - 10) * 6.4} ${(userPosition.x + 40) * 3.2} ${userPosition.y * 6.4}`}
-              stroke="url(#gradient)"
-              strokeWidth="3"
-              fill="none"
-              strokeDasharray="5,5"
-            />
-            <defs>
-              <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" />
-                <stop offset="100%" stopColor="hsl(var(--accent))" />
-              </linearGradient>
-            </defs>
-          </svg>
-        )}
+      <div className="flex-1 relative overflow-hidden">
+        <OpenStreetMap 
+          isRunning={isRunning}
+          onTerritoryComplete={handleTerritoryComplete}
+          territories={territories}
+        />
       </div>
 
       {/* Bottom Controls */}
@@ -162,24 +137,36 @@ export function MapView({
           </div>
 
           {/* Run Button */}
-          <Button
-            variant={isRunning ? "running" : "gradient"}
-            size="lg"
-            className="w-full h-14 text-lg rounded-xl"
-            onClick={isRunning ? onStopRun : onStartRun}
-          >
-            {isRunning ? (
-              <>
-                <Square className="mr-2" />
-                Claim Territory
-              </>
-            ) : (
-              <>
-                <Play className="mr-2" />
-                Start Run
-              </>
-            )}
-          </Button>
+          {canClaim && isRunning ? (
+            <Button
+              variant="gradient"
+              size="lg"
+              className="w-full h-14 text-lg rounded-xl animate-pulse"
+              onClick={handleClaimTerritory}
+            >
+              <Square className="mr-2" />
+              Claim Territory ({(territoryArea / 10000).toFixed(2)} ha)
+            </Button>
+          ) : (
+            <Button
+              variant={isRunning ? "running" : "gradient"}
+              size="lg"
+              className="w-full h-14 text-lg rounded-xl"
+              onClick={isRunning ? onStopRun : onStartRun}
+            >
+              {isRunning ? (
+                <>
+                  <Square className="mr-2" />
+                  Stop Running
+                </>
+              ) : (
+                <>
+                  <Play className="mr-2" />
+                  Start Run
+                </>
+              )}
+            </Button>
+          )}
         </div>
       </div>
 

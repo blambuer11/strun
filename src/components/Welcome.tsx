@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Play, Wallet } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect } from "react";
+import { loginWithGoogle, handleOAuthCallback, isAuthenticated } from "@/lib/zklogin";
+import { toast } from "sonner";
 
 interface WelcomeProps {
   onGetStarted: () => void;
@@ -8,6 +11,26 @@ interface WelcomeProps {
 }
 
 export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
+  // Check for OAuth callback
+  useEffect(() => {
+    const checkAuth = async () => {
+      if (window.location.hash) {
+        const address = await handleOAuthCallback();
+        if (address) {
+          toast.success("Successfully logged in with zkLogin!");
+          onGetStarted();
+        }
+      } else if (isAuthenticated()) {
+        onGetStarted();
+      }
+    };
+    checkAuth();
+  }, [onGetStarted]);
+
+  const handleZkLogin = () => {
+    loginWithGoogle();
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -62,19 +85,19 @@ export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
               variant="gradient" 
               size="lg" 
               className="w-full h-14 text-lg rounded-xl"
-              onClick={onGetStarted}
+              onClick={handleZkLogin}
             >
-              <Play className="mr-2" />
-              Get Started
+              <Wallet className="mr-2" />
+              Login with Google (zkLogin)
             </Button>
             <Button 
               variant="glass" 
               size="lg" 
               className="w-full h-14 text-lg rounded-xl"
-              onClick={onConnectWallet}
+              onClick={onGetStarted}
             >
-              <Wallet className="mr-2" />
-              Connect Wallet
+              <Play className="mr-2" />
+              Continue as Guest
             </Button>
           </motion.div>
         </motion.div>

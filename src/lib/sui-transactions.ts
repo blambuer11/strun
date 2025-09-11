@@ -2,6 +2,7 @@ import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { suiClient, PACKAGE_ID, MODULE_NAME, calculatePolygonArea } from './sui-config';
 import { getZkLoginSig, getCurrentUserAddress } from './zklogin';
 import { toast } from 'sonner';
+import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 
 // Get or create user profile
 export async function getOrCreateProfile() {
@@ -34,7 +35,17 @@ export async function getOrCreateProfile() {
     });
 
     const result = await executeTransaction(tx);
-    return result.objectChanges?.[0]?.objectId;
+    
+    // Find the created object ID from the transaction result
+    if (result.objectChanges) {
+      for (const change of result.objectChanges) {
+        if ('objectType' in change && change.objectType?.includes('UserProfile')) {
+          return change.objectId;
+        }
+      }
+    }
+    
+    throw new Error('Failed to create profile');
   } catch (error) {
     console.error('Error with profile:', error);
     throw error;
@@ -53,7 +64,17 @@ export async function startRunSession() {
   });
 
   const result = await executeTransaction(tx);
-  return result.objectChanges?.[0]?.objectId;
+  
+  // Find the created session object
+  if (result.objectChanges) {
+    for (const change of result.objectChanges) {
+      if ('objectType' in change && change.objectType?.includes('RunSession')) {
+        return change.objectId;
+      }
+    }
+  }
+  
+  return null;
 }
 
 // Claim territory
@@ -145,11 +166,11 @@ async function executeTransaction(tx: TransactionBlock) {
   try {
     tx.setSender(address);
     
-    const { bytes, signature: userSig } = await tx.sign({
-      client: suiClient,
-    });
-
-    const zkLoginSig = await getZkLoginSig(bytes);
+    // Build the transaction
+    const bytes = await tx.build({ client: suiClient });
+    
+    // Get zkLogin signature
+    const zkLoginSig = await getZkLoginSig(new Uint8Array(bytes));
 
     const result = await suiClient.executeTransactionBlock({
       transactionBlock: bytes,
@@ -187,13 +208,19 @@ export async function getUserTerritories() {
       },
     });
 
-    return data.map((obj: any) => ({
-      id: obj.data?.objectId,
-      name: obj.data?.content?.fields?.name,
-      area: obj.data?.content?.fields?.area,
-      rentPrice: obj.data?.content?.fields?.rent_price,
-      coordinates: obj.data?.content?.fields?.coordinates,
-    }));
+    return data.map((obj: any) => {
+      if (obj.data?.content?.dataType === 'moveObject') {
+        const fields = obj.data.content.fields;
+        return {
+          id: obj.data?.objectId,
+          name: fields?.name,
+          area: fields?.area,
+          rentPrice: fields?.rent_price,
+          coordinates: fields?.coordinates,
+        };
+      }
+      return null;
+    }).filter(Boolean);
   } catch (error) {
     console.error('Error fetching territories:', error);
     return [];
@@ -214,7 +241,10 @@ export async function getUserXP() {
       },
     });
 
-    return data?.content?.fields?.xp_balance?.fields?.amount || 0;
+    if (data?.content?.dataType === 'moveObject') {
+      return (data.content as any).fields?.xp_balance?.fields?.amount || 0;
+    }
+    return 0;
   } catch (error) {
     console.error('Error fetching XP:', error);
     return 0;
