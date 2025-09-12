@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -177,21 +177,18 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         
         <MapUpdater center={currentPosition} />
 
-        {/* User marker */}
         <Marker position={currentPosition} icon={userIcon} />
 
-        {/* Running path */}
-        {runPath.length > 1 && (
+        {runPath.length > 1 ? (
           <Polyline
             positions={runPath.map(p => [p.lat, p.lng])}
             color="#6C5CE7"
             weight={4}
             opacity={0.8}
           />
-        )}
+        ) : null}
 
-        {/* Show polygon preview if close to completing */}
-        {runPath.length > 3 && isPolygonClosed(runPath, 50) && (
+        {runPath.length > 3 && isPolygonClosed(runPath, 50) ? (
           <Polygon
             positions={runPath.map(p => [p.lat, p.lng])}
             pathOptions={{
@@ -201,9 +198,8 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
               fillOpacity: 0.2,
             }}
           />
-        )}
+        ) : null}
 
-        {/* Existing territories */}
         {territories.map((territory) => (
           <Polygon
             key={territory.id}
