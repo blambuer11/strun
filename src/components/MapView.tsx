@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Square, Battery, Radio, Navigation, MapPin } from "lucide-react";
+import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import OpenStreetMap from "./OpenStreetMap";
-import { claimTerritory, getUserTerritories } from "@/lib/sui-transactions";
+import { claimTerritory, getUserTerritories, payTerritoryRent, startRunSession, completeRunSession } from "@/lib/sui-transactions";
 import { toast } from "sonner";
+import strunLogo from "@/assets/strun-logo-new.png";
 
 interface MapViewProps {
   isRunning: boolean;
@@ -31,12 +32,15 @@ export function MapView({
   runningStats = { distance: 0, time: "00:00", pace: 0 }
 }: MapViewProps) {
   const [showRentModal, setShowRentModal] = useState(false);
+  const [rentTerritory, setRentTerritory] = useState<any>(null);
   const [territories, setTerritories] = useState<any[]>([]);
   const [canClaim, setCanClaim] = useState(false);
   const [territoryPath, setTerritoryPath] = useState<Array<{ lat: number; lng: number }>>([]);
   const [territoryArea, setTerritoryArea] = useState(0);
   const [currentDistance, setCurrentDistance] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [showStats, setShowStats] = useState(false);
 
   // Load existing territories
   useEffect(() => {
@@ -74,11 +78,43 @@ export function MapView({
       
       toast.success(`Territory "${territoryName}" claimed! You earned ${Math.floor(territoryArea / 10)} XP!`);
       setCanClaim(false);
+      
+      // Reload territories
+      const updatedTerritories = await getUserTerritories();
+      setTerritories(updatedTerritories);
+      
       onStopRun();
     } catch (error) {
       console.error("Failed to claim territory:", error);
       toast.error("Failed to claim territory. Please try again.");
     }
+  };
+  
+  const handlePayRent = async () => {
+    if (!rentTerritory) return;
+    
+    try {
+      await payTerritoryRent(
+        rentTerritory.id,
+        rentTerritory.owner,
+        rentTerritory.rentPrice
+      );
+      toast.success(`Paid ${rentTerritory.rentPrice} XP rent to territory owner`);
+      setShowRentModal(false);
+      setRentTerritory(null);
+    } catch (error) {
+      console.error("Failed to pay rent:", error);
+      toast.error("Failed to pay rent");
+    }
+  };
+  
+  const handleDeclineRent = () => {
+    if (rentTerritory) {
+      const penalty = rentTerritory.rentPrice * 2;
+      toast.warning(`Penalty: ${penalty} XP will be deducted`);
+    }
+    setShowRentModal(false);
+    setRentTerritory(null);
   };
 
   return (
@@ -87,11 +123,12 @@ export function MapView({
       <div className="glass-card backdrop-blur-xl border-b border-white/10 z-10">
         <div className="flex items-center justify-between p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-primary to-accent rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-xl">S</span>
-            </div>
+            <img 
+              src={strunLogo} 
+              alt="StRun Logo" 
+              className="h-10 w-auto object-contain"
+            />
             <div>
-              <h3 className="text-foreground font-semibold">StRun</h3>
               <p className="text-xs text-muted-foreground">
                 {isRunning ? (
                   <span className="flex items-center gap-1">
@@ -200,23 +237,27 @@ export function MapView({
           <DialogHeader>
             <DialogTitle className="text-xl">🏃‍♂️ Territory Entry</DialogTitle>
             <DialogDescription className="text-muted-foreground pt-2">
-              You've entered @runner23's territory. Pay 100 XP rent to continue?
+              {rentTerritory ? (
+                <>You've entered {rentTerritory.name}. Pay {rentTerritory.rentPrice} XP rent to continue?</>
+              ) : (
+                <>You've entered a territory. Pay rent to continue?</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 pt-4">
             <Button 
               variant="gradient" 
-              onClick={() => setShowRentModal(false)}
+              onClick={handlePayRent}
               className="w-full"
             >
-              Pay 100 XP
+              Pay {rentTerritory?.rentPrice || 100} XP
             </Button>
             <Button 
               variant="outline" 
-              onClick={() => setShowRentModal(false)}
+              onClick={handleDeclineRent}
               className="w-full text-destructive border-destructive/50 hover:bg-destructive/10"
             >
-              Decline (200 XP penalty)
+              Decline ({rentTerritory ? rentTerritory.rentPrice * 2 : 200} XP penalty)
             </Button>
           </div>
         </DialogContent>

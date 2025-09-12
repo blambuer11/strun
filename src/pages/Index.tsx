@@ -114,21 +114,34 @@ const Index = () => {
     }, 1500);
   };
 
-  const handleStartRun = () => {
+  const handleStartRun = async () => {
     setIsRunning(true);
     setRunStartTime(Date.now());
     setRunningStats({ distance: 0, time: "00:00", pace: 0 });
-    toast.success("Run started! Keep moving to claim territory.");
+    
+    // Request location permission first
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          toast.success("Run started! GPS tracking enabled.");
+        },
+        (error) => {
+          console.error("Location error:", error);
+          toast.warning("Location access needed for full features.");
+        }
+      );
+    }
   };
 
   const handleStopRun = () => {
     setIsRunning(false);
     setRunStartTime(null);
     
-    if (runningStats.distance >= 0.1) {
-      toast.success(`Territory claimed! You've earned ${Math.floor(runningStats.distance * 1000)} XP!`);
+    const xpEarned = Math.floor(runningStats.distance * 1000);
+    if (xpEarned > 0) {
+      toast.success(`Run completed! You've earned ${xpEarned} XP!`);
     } else {
-      toast.warning("Run more to claim a territory!");
+      toast.info("Run completed!");
     }
   };
 

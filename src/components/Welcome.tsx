@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated } from "@/lib/zklogin";
 import { toast } from "sonner";
-import strunLogo from "@/assets/strun-logo.png";
+import strunLogo from "@/assets/strun-logo-new.png";
 
 interface WelcomeProps {
   onGetStarted: () => void;

@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { LogOut, Trophy, Map, Activity, Clock, Target, Award } from "lucide-react";
 import { motion } from "framer-motion";
+import strunLogo from "@/assets/strun-logo-new.png";
 
 interface ProfileProps {
   user: {
