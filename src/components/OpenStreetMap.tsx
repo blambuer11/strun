@@ -33,79 +33,12 @@ interface MapProps {
 }
 
 // MapUpdater component must be inside MapContainer to use useMap hook
-const MapUpdater = ({ center }: { center: [number, number] }) => {
+function MapUpdater({ center }: { center: [number, number] }) {
   const map = useMap();
   useEffect(() => {
     map.setView(center, map.getZoom());
   }, [center, map]);
   return null;
-};
-
-// Main map content component
-function MapContent({ 
-  currentPosition, 
-  runPath, 
-  territories 
-}: { 
-  currentPosition: [number, number];
-  runPath: Array<{ lat: number; lng: number }>;
-  territories: Array<{
-    id: string;
-    coordinates: Array<{ lat: number; lng: number }>;
-    owner: string;
-    name: string;
-  }>;
-}) {
-  const showPolyline = runPath && runPath.length > 1;
-  const showPolygon = runPath && runPath.length > 3 && isPolygonClosed(runPath, 50);
-  const hasTerritories = territories && territories.length > 0;
-  
-  return (
-    <>
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-      />
-      
-      <MapUpdater center={currentPosition} />
-      
-      <Marker position={currentPosition} icon={userIcon} />
-      
-      {showPolyline && (
-        <Polyline
-          positions={runPath.map(p => [p.lat, p.lng])}
-          color="#6C5CE7"
-          weight={4}
-          opacity={0.8}
-        />
-      )}
-      
-      {showPolygon && (
-        <Polygon
-          positions={runPath.map(p => [p.lat, p.lng])}
-          pathOptions={{
-            color: '#00E3A7',
-            weight: 2,
-            fillColor: '#00E3A7',
-            fillOpacity: 0.2,
-          }}
-        />
-      )}
-      
-      {hasTerritories && territories.map((territory) => (
-        <Polygon
-          key={territory.id}
-          positions={territory.coordinates.map(c => [c.lat, c.lng])}
-          pathOptions={{
-            color: '#6C5CE7',
-            weight: 2,
-            fillColor: '#6C5CE7',
-            fillOpacity: 0.15,
-          }}
-        />
-      ))}
-    </>
-  );
 }
 
 export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: MapProps) {
@@ -228,6 +161,9 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
     );
   }
 
+  const showPolyline = runPath && runPath.length > 1;
+  const showPolygon = runPath && runPath.length > 3 && isPolygonClosed(runPath, 50);
+
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -236,11 +172,48 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         className="w-full h-full"
         zoomControl={false}
       >
-        <MapContent 
-          currentPosition={currentPosition}
-          runPath={runPath}
-          territories={territories}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
+        
+        <MapUpdater center={currentPosition} />
+        
+        <Marker position={currentPosition} icon={userIcon} />
+        
+        {showPolyline && (
+          <Polyline
+            positions={runPath.map(p => [p.lat, p.lng])}
+            color="#6C5CE7"
+            weight={4}
+            opacity={0.8}
+          />
+        )}
+        
+        {showPolygon && (
+          <Polygon
+            positions={runPath.map(p => [p.lat, p.lng])}
+            pathOptions={{
+              color: '#00E3A7',
+              weight: 2,
+              fillColor: '#00E3A7',
+              fillOpacity: 0.2,
+            }}
+          />
+        )}
+        
+        {territories && territories.map((territory) => (
+          <Polygon
+            key={territory.id}
+            positions={territory.coordinates.map(c => [c.lat, c.lng])}
+            pathOptions={{
+              color: '#6C5CE7',
+              weight: 2,
+              fillColor: '#6C5CE7',
+              fillOpacity: 0.15,
+            }}
+          />
+        ))}
       </MapContainer>
 
       {isRunning && totalDistance > 0 && (
