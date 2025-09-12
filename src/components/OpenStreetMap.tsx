@@ -163,10 +163,55 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
     );
   }
 
-  const showRunPath = runPath && runPath.length > 1;
-  const showTerritory = runPath && runPath.length > 3 && isPolygonClosed(runPath, 50);
+  const renderRunPath = () => {
+    if (runPath && runPath.length > 1) {
+      return (
+        <Polyline
+          positions={runPath.map(p => [p.lat, p.lng])}
+          color="#6C5CE7"
+          weight={4}
+          opacity={0.8}
+        />
+      );
+    }
+    return null;
+  };
 
-  console.log('OpenStreetMap render:', { currentPosition, runPath, territories, showRunPath, showTerritory });
+  const renderTerritory = () => {
+    if (runPath && runPath.length > 3 && isPolygonClosed(runPath, 50)) {
+      return (
+        <Polygon
+          positions={runPath.map(p => [p.lat, p.lng])}
+          pathOptions={{
+            color: '#00E3A7',
+            weight: 2,
+            fillColor: '#00E3A7',
+            fillOpacity: 0.2,
+          }}
+        />
+      );
+    }
+    return null;
+  };
+
+  const renderTerritories = () => {
+    if (!territories || territories.length === 0) return null;
+    
+    return territories.map((territory) => (
+      <Polygon
+        key={territory.id}
+        positions={territory.coordinates.map(c => [c.lat, c.lng])}
+        pathOptions={{
+          color: '#6C5CE7',
+          weight: 2,
+          fillColor: '#6C5CE7',
+          fillOpacity: 0.15,
+        }}
+      />
+    ));
+  };
+
+  console.log('OpenStreetMap render:', { currentPosition, runPath, territories });
 
   return (
     <div className="relative w-full h-full">
@@ -180,44 +225,11 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-        
         <MapCenterUpdater center={currentPosition} />
-        
         <Marker position={currentPosition} icon={userIcon} />
-        
-        {showRunPath && (
-          <Polyline
-            positions={runPath.map(p => [p.lat, p.lng])}
-            color="#6C5CE7"
-            weight={4}
-            opacity={0.8}
-          />
-        )}
-        
-        {showTerritory && (
-          <Polygon
-            positions={runPath.map(p => [p.lat, p.lng])}
-            pathOptions={{
-              color: '#00E3A7',
-              weight: 2,
-              fillColor: '#00E3A7',
-              fillOpacity: 0.2,
-            }}
-          />
-        )}
-        
-        {territories && territories.length > 0 && territories.map((territory) => (
-          <Polygon
-            key={territory.id}
-            positions={territory.coordinates.map(c => [c.lat, c.lng])}
-            pathOptions={{
-              color: '#6C5CE7',
-              weight: 2,
-              fillColor: '#6C5CE7',
-              fillOpacity: 0.15,
-            }}
-          />
-        ))}
+        {renderRunPath()}
+        {renderTerritory()}
+        {renderTerritories()}
       </MapContainer>
 
       {isRunning && totalDistance > 0 && (

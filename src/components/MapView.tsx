@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, Battery, Radio, Navigation, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { OpenStreetMap } from "./OpenStreetMap";
+// import { OpenStreetMap } from "./OpenStreetMap";
+import { SimpleMap } from "./SimpleMap";
 import { claimTerritory } from "@/lib/sui-transactions";
 import { toast } from "sonner";
 
@@ -98,11 +99,8 @@ export function MapView({
 
       {/* Map Area */}
       <div className="flex-1 relative overflow-hidden">
-        <OpenStreetMap 
-          isRunning={isRunning}
-          onTerritoryComplete={handleTerritoryComplete}
-          territories={territories}
-        />
+        {/* Temporarily using SimpleMap to test basic rendering */}
+        <SimpleMap />
       </div>
 
       {/* Bottom Controls */}
