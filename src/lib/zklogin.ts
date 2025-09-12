@@ -11,7 +11,7 @@ import { suiClient } from './sui-config';
 import { toast } from 'sonner';
 import { toB64 } from '@mysten/sui.js/utils';
 
-const REDIRECT_URI = window.location.origin;
+const REDIRECT_URI = `${window.location.origin}/`;
 const PROVER_URL = 'https://prover-dev.mystenlabs.com/v1';
 const SALT_SERVICE_URL = 'https://salt.api.mystenlabs.com/get_salt';
 

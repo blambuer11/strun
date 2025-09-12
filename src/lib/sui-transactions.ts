@@ -250,3 +250,24 @@ export async function getUserXP() {
     return 0;
   }
 }
+
+// Complete a run session
+export async function completeRunSession(
+  sessionId: string,
+  distance: number,
+  xpEarned: number
+): Promise<void> {
+  const tx = new TransactionBlock();
+  
+  tx.moveCall({
+    target: `${PACKAGE_ID}::${MODULE_NAME}::complete_run`,
+    arguments: [
+      tx.pure(sessionId),
+      tx.pure(distance),
+      tx.pure(xpEarned),
+      tx.object('0x6'), // Clock object
+    ],
+  });
+
+  await executeTransaction(tx);
+}
