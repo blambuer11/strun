@@ -115,21 +115,27 @@ const Index = () => {
   };
 
   const handleStartRun = async () => {
-    setIsRunning(true);
-    setRunStartTime(Date.now());
-    setRunningStats({ distance: 0, time: "00:00", pace: 0 });
-    
     // Request location permission first
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         () => {
-          toast.success("Run started! GPS tracking enabled.");
+          setIsRunning(true);
+          setRunStartTime(Date.now());
+          setRunningStats({ distance: 0, time: "00:00", pace: 0 });
+          toast.success("🏃 Run started! GPS tracking enabled.");
         },
         (error) => {
           console.error("Location error:", error);
-          toast.warning("Location access needed for full features.");
+          toast.error("⚠️ Please enable location access to start running!");
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
         }
       );
+    } else {
+      toast.error("Geolocation is not supported by your browser");
     }
   };
 
