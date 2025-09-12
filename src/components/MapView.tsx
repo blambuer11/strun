@@ -3,10 +3,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, Battery, Radio, Navigation, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-// import { OpenStreetMap } from "./OpenStreetMap";
-// import { SimpleMap } from "./SimpleMap";
-// import { DynamicMap } from "./DynamicMap";
-import { BasicMap } from "./BasicMap";
+import { StaticMap } from "./StaticMap";
 import { claimTerritory } from "@/lib/sui-transactions";
 import { toast } from "sonner";
 
@@ -101,10 +98,7 @@ export function MapView({
 
       {/* Map Area */}
       <div className="flex-1 relative overflow-hidden">
-        {/* Testing with no map component at all */}
-        <div className="w-full h-full bg-muted/10 flex items-center justify-center">
-          <p>No map component</p>
-        </div>
+        <StaticMap />
       </div>
 
       {/* Bottom Controls */}

@@ -102,7 +102,7 @@ const Index = () => {
   const handleGetStarted = () => {
     setIsAuthenticated(true);
     setActiveTab("map");
-    toast.success("Welcome to Strun! Start running to claim territories.");
+    toast.success("Welcome to StRun! Start running to claim territories.");
   };
 
   const handleConnectWallet = () => {
@@ -168,17 +168,13 @@ const Index = () => {
         )}
         
         {activeTab === "map" && (
-          <div className="flex items-center justify-center h-full bg-muted/10">
-            <div className="text-center p-8">
-              <h2 className="text-2xl font-bold mb-2">Map Temporarily Disabled</h2>
-              <p className="text-muted-foreground">
-                We're fixing a technical issue with the map component
-              </p>
-              <p className="text-sm mt-4">
-                Console: Debugging render2 error
-              </p>
-            </div>
-          </div>
+          <MapView
+            isRunning={isRunning}
+            onStartRun={handleStartRun}
+            onStopRun={handleStopRun}
+            stats={stats}
+            runningStats={runningStats}
+          />
         )}
         
         {activeTab === "wallet" && (
