@@ -178,16 +178,16 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         
         <Marker position={currentPosition} icon={userIcon} />
         
-        {runPath.length > 1 ? (
+        {runPath.length > 1 && (
           <Polyline
             positions={runPath.map(p => [p.lat, p.lng])}
             color="#6C5CE7"
             weight={4}
             opacity={0.8}
           />
-        ) : null}
+        )}
         
-        {runPath.length > 3 && isPolygonClosed(runPath, 50) ? (
+        {runPath.length > 3 && isPolygonClosed(runPath, 50) && (
           <Polygon
             positions={runPath.map(p => [p.lat, p.lng])}
             pathOptions={{
@@ -197,7 +197,7 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
               fillOpacity: 0.2,
             }}
           />
-        ) : null}
+        )}
         
         {territories.map((territory) => (
           <Polygon
@@ -213,12 +213,12 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         ))}
       </MapContainer>
 
-      {isRunning && totalDistance > 0 ? (
+      {isRunning && totalDistance > 0 && (
         <div className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
           <p className="text-sm text-muted-foreground">Distance</p>
           <p className="text-lg font-bold text-primary">{(totalDistance / 1000).toFixed(2)} km</p>
         </div>
-      ) : null}
+      )}
     </div>
   );
 }
