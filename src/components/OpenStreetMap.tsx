@@ -161,9 +161,6 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
     );
   }
 
-  const showPolyline = runPath && runPath.length > 1;
-  const showPolygon = runPath && runPath.length > 3 && isPolygonClosed(runPath, 50);
-
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -181,16 +178,16 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         
         <Marker position={currentPosition} icon={userIcon} />
         
-        {showPolyline && (
+        {runPath.length > 1 ? (
           <Polyline
             positions={runPath.map(p => [p.lat, p.lng])}
             color="#6C5CE7"
             weight={4}
             opacity={0.8}
           />
-        )}
+        ) : null}
         
-        {showPolygon && (
+        {runPath.length > 3 && isPolygonClosed(runPath, 50) ? (
           <Polygon
             positions={runPath.map(p => [p.lat, p.lng])}
             pathOptions={{
@@ -200,9 +197,9 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
               fillOpacity: 0.2,
             }}
           />
-        )}
+        ) : null}
         
-        {territories && territories.map((territory) => (
+        {territories.map((territory) => (
           <Polygon
             key={territory.id}
             positions={territory.coordinates.map(c => [c.lat, c.lng])}
@@ -216,12 +213,12 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         ))}
       </MapContainer>
 
-      {isRunning && totalDistance > 0 && (
+      {isRunning && totalDistance > 0 ? (
         <div className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
           <p className="text-sm text-muted-foreground">Distance</p>
           <p className="text-lg font-bold text-primary">{(totalDistance / 1000).toFixed(2)} km</p>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
