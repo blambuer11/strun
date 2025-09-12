@@ -30,7 +30,7 @@ export async function initializeZkLogin(): Promise<ZkLoginState> {
   const maxEpoch = Number(epoch) + 10; // Valid for 10 epochs
   
   const nonce = generateNonce(
-    ephemeralKeypair.getPublicKey().toBase64(),
+    ephemeralKeypair.getPublicKey() as any,
     maxEpoch,
     randomness
   );
@@ -146,7 +146,7 @@ export async function getZkLoginSig(txBytes: Uint8Array): Promise<string> {
     body: JSON.stringify({
       jwt: idToken,
       extendedEphemeralPublicKey: getExtendedEphemeralPublicKey(
-        ephemeralKeypair.getPublicKey().toBase64()
+        ephemeralKeypair.getPublicKey() as any
       ),
       maxEpoch: Number(maxEpoch),
       jwtRandomness: randomness,
@@ -163,7 +163,7 @@ export async function getZkLoginSig(txBytes: Uint8Array): Promise<string> {
   const signature = getZkLoginSignature({
     inputs: proof,
     maxEpoch: Number(maxEpoch),
-    userSignature: toB64(userSignature.signature),
+    userSignature: userSignature.signature,
   });
   
   return signature;
