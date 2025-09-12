@@ -167,16 +167,16 @@ export function MapView({
       </div>
 
       {/* Bottom Controls */}
-      <div className="glass-card backdrop-blur-xl border-t border-white/10">
+      <div className="glass-card backdrop-blur-xl border-t border-white/10 pb-20">
         <div className="p-4 space-y-4">
           {/* Stats */}
           <div className="grid grid-cols-3 gap-4">
             <div className="text-center">
               <div className="text-2xl font-bold text-accent">
-                {isRunning ? runningStats.distance.toFixed(1) : stats.xp}
+                {isRunning ? currentDistance.toFixed(0) : stats.xp}
               </div>
               <div className="text-xs text-muted-foreground">
-                {isRunning ? "km" : "XP"}
+                {isRunning ? "Meters" : "XP"}
               </div>
             </div>
             <div className="text-center">
@@ -189,10 +189,10 @@ export function MapView({
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-foreground">
-                {isRunning ? runningStats.pace.toFixed(1) : `${(stats.distance / 1000).toFixed(1)}km`}
+                {isRunning ? `${xpEarned} XP` : `${(stats.distance / 1000).toFixed(1)}km`}
               </div>
               <div className="text-xs text-muted-foreground">
-                {isRunning ? "Pace" : "Today"}
+                {isRunning ? "Earned" : "Today"}
               </div>
             </div>
           </div>
@@ -205,14 +205,14 @@ export function MapView({
               className="w-full h-14 text-lg rounded-xl animate-pulse"
               onClick={handleClaimTerritory}
             >
-              <Square className="mr-2" />
+              <MapPin className="mr-2" />
               Claim Territory ({(territoryArea / 10000).toFixed(2)} ha)
             </Button>
           ) : (
             <Button
               variant={isRunning ? "running" : "gradient"}
               size="lg"
-              className="w-full h-14 text-lg rounded-xl"
+              className="w-full h-14 text-lg rounded-xl shadow-lg"
               onClick={isRunning ? onStopRun : onStartRun}
             >
               {isRunning ? (
