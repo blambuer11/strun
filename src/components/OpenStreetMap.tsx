@@ -163,66 +163,68 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
   }
 
   return (
-    <MapContainer
-      center={currentPosition}
-      zoom={16}
-      className="w-full h-full"
-      zoomControl={false}
-    >
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-      />
-      
-      <MapUpdater center={currentPosition} />
-
-      {/* User marker */}
-      <Marker position={currentPosition} icon={userIcon} />
-
-      {/* Running path */}
-      {runPath.length > 1 && (
-        <Polyline
-          positions={runPath.map(p => [p.lat, p.lng])}
-          color="#6C5CE7"
-          weight={4}
-          opacity={0.8}
+    <div className="relative w-full h-full">
+      <MapContainer
+        center={currentPosition}
+        zoom={16}
+        className="w-full h-full"
+        zoomControl={false}
+      >
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
-      )}
+        
+        <MapUpdater center={currentPosition} />
 
-      {/* Show polygon preview if close to completing */}
-      {runPath.length > 3 && isPolygonClosed(runPath, 50) && (
-        <Polygon
-          positions={runPath.map(p => [p.lat, p.lng])}
-          pathOptions={{
-            color: '#00E3A7',
-            weight: 2,
-            fillColor: '#00E3A7',
-            fillOpacity: 0.2,
-          }}
-        />
-      )}
+        {/* User marker */}
+        <Marker position={currentPosition} icon={userIcon} />
 
-      {/* Existing territories */}
-      {territories.map((territory) => (
-        <Polygon
-          key={territory.id}
-          positions={territory.coordinates.map(c => [c.lat, c.lng])}
-          pathOptions={{
-            color: '#6C5CE7',
-            weight: 2,
-            fillColor: '#6C5CE7',
-            fillOpacity: 0.15,
-          }}
-        />
-      ))}
+        {/* Running path */}
+        {runPath.length > 1 && (
+          <Polyline
+            positions={runPath.map(p => [p.lat, p.lng])}
+            color="#6C5CE7"
+            weight={4}
+            opacity={0.8}
+          />
+        )}
 
-      {/* Distance indicator */}
+        {/* Show polygon preview if close to completing */}
+        {runPath.length > 3 && isPolygonClosed(runPath, 50) && (
+          <Polygon
+            positions={runPath.map(p => [p.lat, p.lng])}
+            pathOptions={{
+              color: '#00E3A7',
+              weight: 2,
+              fillColor: '#00E3A7',
+              fillOpacity: 0.2,
+            }}
+          />
+        )}
+
+        {/* Existing territories */}
+        {territories.map((territory) => (
+          <Polygon
+            key={territory.id}
+            positions={territory.coordinates.map(c => [c.lat, c.lng])}
+            pathOptions={{
+              color: '#6C5CE7',
+              weight: 2,
+              fillColor: '#6C5CE7',
+              fillOpacity: 0.15,
+            }}
+          />
+        ))}
+      </MapContainer>
+
+      {/* Distance indicator - moved outside MapContainer */}
       {isRunning && totalDistance > 0 && (
         <div className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
           <p className="text-sm text-muted-foreground">Distance</p>
           <p className="text-lg font-bold text-primary">{(totalDistance / 1000).toFixed(2)} km</p>
         </div>
       )}
-    </MapContainer>
+    </div>
   );
 }
