@@ -15,7 +15,7 @@ export const MODULE_NAME = 'territory';
 
 // zkLogin Configuration
 export const ZKLOGIN_PROVIDER = 'https://zklogin.sui.io';
-export const CLIENT_ID = process.env.VITE_GOOGLE_CLIENT_ID || '';
+export const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
 
 // Territory claiming configuration
 export const MIN_TERRITORY_SIZE = 100; // minimum 100 meters
