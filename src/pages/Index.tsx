@@ -168,13 +168,17 @@ const Index = () => {
         )}
         
         {activeTab === "map" && (
-          <MapView
-            isRunning={isRunning}
-            onStartRun={handleStartRun}
-            onStopRun={handleStopRun}
-            stats={stats}
-            runningStats={runningStats}
-          />
+          <div className="flex items-center justify-center h-full bg-muted/10">
+            <div className="text-center p-8">
+              <h2 className="text-2xl font-bold mb-2">Map Temporarily Disabled</h2>
+              <p className="text-muted-foreground">
+                We're fixing a technical issue with the map component
+              </p>
+              <p className="text-sm mt-4">
+                Console: Debugging render2 error
+              </p>
+            </div>
+          </div>
         )}
         
         {activeTab === "wallet" && (
