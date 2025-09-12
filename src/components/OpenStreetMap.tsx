@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { MapContainer } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Geolocation } from '@capacitor/geolocation';
 import { toast } from 'sonner';
 import { calculateDistance, isPolygonClosed, calculatePolygonArea } from '@/lib/sui-config';
-import { MapComponents } from './MapComponents';
 
 // Fix Leaflet default marker icons
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -13,6 +12,13 @@ L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+});
+
+// Custom marker for user position
+const userIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9IiMwMEUzQTciIHN0cm9rZT0iI2ZmZiIgc3Ryb2tlLXdpZHRoPSIzIi8+CjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjQiIGZpbGw9IiNmZmYiLz4KPC9zdmc+',
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 interface MapProps {
@@ -24,6 +30,17 @@ interface MapProps {
     owner: string;
     name: string;
   }>;
+}
+
+// Component to update map center - must be inside MapContainer
+function MapCenterUpdater({ center }: { center: [number, number] }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+  }, [center, map]);
+  
+  return null;
 }
 
 export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: MapProps) {
@@ -146,6 +163,11 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
     );
   }
 
+  const showRunPath = runPath && runPath.length > 1;
+  const showTerritory = runPath && runPath.length > 3 && isPolygonClosed(runPath, 50);
+
+  console.log('OpenStreetMap render:', { currentPosition, runPath, territories, showRunPath, showTerritory });
+
   return (
     <div className="relative w-full h-full">
       <MapContainer
@@ -154,11 +176,48 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         className="w-full h-full"
         zoomControl={false}
       >
-        <MapComponents 
-          currentPosition={currentPosition}
-          runPath={runPath}
-          territories={territories}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         />
+        
+        <MapCenterUpdater center={currentPosition} />
+        
+        <Marker position={currentPosition} icon={userIcon} />
+        
+        {showRunPath && (
+          <Polyline
+            positions={runPath.map(p => [p.lat, p.lng])}
+            color="#6C5CE7"
+            weight={4}
+            opacity={0.8}
+          />
+        )}
+        
+        {showTerritory && (
+          <Polygon
+            positions={runPath.map(p => [p.lat, p.lng])}
+            pathOptions={{
+              color: '#00E3A7',
+              weight: 2,
+              fillColor: '#00E3A7',
+              fillOpacity: 0.2,
+            }}
+          />
+        )}
+        
+        {territories && territories.length > 0 && territories.map((territory) => (
+          <Polygon
+            key={territory.id}
+            positions={territory.coordinates.map(c => [c.lat, c.lng])}
+            pathOptions={{
+              color: '#6C5CE7',
+              weight: 2,
+              fillColor: '#6C5CE7',
+              fillOpacity: 0.15,
+            }}
+          />
+        ))}
       </MapContainer>
 
       {isRunning && totalDistance > 0 && (
