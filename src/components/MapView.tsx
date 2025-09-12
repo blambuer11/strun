@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, Battery, Radio, Navigation, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { StaticMap } from "./StaticMap";
-import { claimTerritory } from "@/lib/sui-transactions";
+import OpenStreetMap from "./OpenStreetMap";
+import { claimTerritory, getUserTerritories } from "@/lib/sui-transactions";
 import { toast } from "sonner";
 
 interface MapViewProps {
@@ -35,6 +35,21 @@ export function MapView({
   const [canClaim, setCanClaim] = useState(false);
   const [territoryPath, setTerritoryPath] = useState<Array<{ lat: number; lng: number }>>([]);
   const [territoryArea, setTerritoryArea] = useState(0);
+  const [currentDistance, setCurrentDistance] = useState(0);
+  const [xpEarned, setXpEarned] = useState(0);
+
+  // Load existing territories
+  useEffect(() => {
+    const loadTerritories = async () => {
+      try {
+        const userTerritories = await getUserTerritories();
+        setTerritories(userTerritories);
+      } catch (error) {
+        console.error("Failed to load territories:", error);
+      }
+    };
+    loadTerritories();
+  }, []);
 
   const handleTerritoryComplete = (area: number, path: Array<{ lat: number; lng: number }>) => {
     setCanClaim(true);
@@ -76,7 +91,7 @@ export function MapView({
               <span className="text-white font-bold text-xl">S</span>
             </div>
             <div>
-              <h3 className="text-foreground font-semibold">Strun</h3>
+              <h3 className="text-foreground font-semibold">StRun</h3>
               <p className="text-xs text-muted-foreground">
                 {isRunning ? (
                   <span className="flex items-center gap-1">
@@ -98,7 +113,20 @@ export function MapView({
 
       {/* Map Area */}
       <div className="flex-1 relative overflow-hidden">
-        <StaticMap />
+        <OpenStreetMap 
+          isRunning={isRunning}
+          onTerritoryComplete={handleTerritoryComplete}
+          onDistanceUpdate={(distance) => {
+            setCurrentDistance(distance);
+            // Calculate XP: 1 XP per 1000 meters (1km)
+            const newXp = Math.floor(distance / 1000);
+            if (newXp > xpEarned) {
+              setXpEarned(newXp);
+              toast.success(`+${newXp - xpEarned} XP earned!`);
+            }
+          }}
+          existingTerritories={territories}
+        />
       </div>
 
       {/* Bottom Controls */}
