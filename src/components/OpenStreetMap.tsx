@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, Fragment } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, Polyline, Polygon, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -32,15 +32,77 @@ interface MapProps {
   }>;
 }
 
-function MapUpdater({ center }: { center: [number, number] }) {
+// MapUpdater component must be inside MapContainer to use useMap hook
+const MapUpdater = ({ center }: { center: [number, number] }) => {
   const map = useMap();
   useEffect(() => {
-    if (center) {
-      map.setView(center, map.getZoom());
-    }
+    map.setView(center, map.getZoom());
   }, [center, map]);
   return null;
-}
+};
+
+// Main map content component
+const MapContent = ({ 
+  currentPosition, 
+  runPath, 
+  territories 
+}: { 
+  currentPosition: [number, number];
+  runPath: Array<{ lat: number; lng: number }>;
+  territories: Array<{
+    id: string;
+    coordinates: Array<{ lat: number; lng: number }>;
+    owner: string;
+    name: string;
+  }>;
+}) => {
+  return (
+    <>
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+      />
+      
+      <MapUpdater center={currentPosition} />
+      
+      <Marker position={currentPosition} icon={userIcon} />
+      
+      {runPath.length > 1 && (
+        <Polyline
+          positions={runPath.map(p => [p.lat, p.lng])}
+          color="#6C5CE7"
+          weight={4}
+          opacity={0.8}
+        />
+      )}
+      
+      {runPath.length > 3 && isPolygonClosed(runPath, 50) && (
+        <Polygon
+          positions={runPath.map(p => [p.lat, p.lng])}
+          pathOptions={{
+            color: '#00E3A7',
+            weight: 2,
+            fillColor: '#00E3A7',
+            fillOpacity: 0.2,
+          }}
+        />
+      )}
+      
+      {territories.map((territory) => (
+        <Polygon
+          key={territory.id}
+          positions={territory.coordinates.map(c => [c.lat, c.lng])}
+          pathOptions={{
+            color: '#6C5CE7',
+            weight: 2,
+            fillColor: '#6C5CE7',
+            fillOpacity: 0.15,
+          }}
+        />
+      ))}
+    </>
+  );
+};
 
 export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: MapProps) {
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null);
@@ -170,51 +232,13 @@ export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: M
         className="w-full h-full"
         zoomControl={false}
       >
-        <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        <MapContent 
+          currentPosition={currentPosition}
+          runPath={runPath}
+          territories={territories}
         />
-        
-        <MapUpdater center={currentPosition} />
-
-        <Marker position={currentPosition} icon={userIcon} />
-
-        {runPath.length > 1 ? (
-          <Polyline
-            positions={runPath.map(p => [p.lat, p.lng])}
-            color="#6C5CE7"
-            weight={4}
-            opacity={0.8}
-          />
-        ) : null}
-
-        {runPath.length > 3 && isPolygonClosed(runPath, 50) ? (
-          <Polygon
-            positions={runPath.map(p => [p.lat, p.lng])}
-            pathOptions={{
-              color: '#00E3A7',
-              weight: 2,
-              fillColor: '#00E3A7',
-              fillOpacity: 0.2,
-            }}
-          />
-        ) : null}
-
-        {territories.map((territory) => (
-          <Polygon
-            key={territory.id}
-            positions={territory.coordinates.map(c => [c.lat, c.lng])}
-            pathOptions={{
-              color: '#6C5CE7',
-              weight: 2,
-              fillColor: '#6C5CE7',
-              fillOpacity: 0.15,
-            }}
-          />
-        ))}
       </MapContainer>
 
-      {/* Distance indicator - moved outside MapContainer */}
       {isRunning && totalDistance > 0 && (
         <div className="absolute top-4 left-4 z-[1000] bg-background/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-lg">
           <p className="text-sm text-muted-foreground">Distance</p>
