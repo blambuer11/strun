@@ -42,7 +42,7 @@ const MapUpdater = ({ center }: { center: [number, number] }) => {
 };
 
 // Main map content component
-const MapContent = ({ 
+function MapContent({ 
   currentPosition, 
   runPath, 
   territories 
@@ -55,7 +55,11 @@ const MapContent = ({
     owner: string;
     name: string;
   }>;
-}) => {
+}) {
+  const showPolyline = runPath && runPath.length > 1;
+  const showPolygon = runPath && runPath.length > 3 && isPolygonClosed(runPath, 50);
+  const hasTerritories = territories && territories.length > 0;
+  
   return (
     <>
       <TileLayer
@@ -67,7 +71,7 @@ const MapContent = ({
       
       <Marker position={currentPosition} icon={userIcon} />
       
-      {runPath.length > 1 && (
+      {showPolyline && (
         <Polyline
           positions={runPath.map(p => [p.lat, p.lng])}
           color="#6C5CE7"
@@ -76,7 +80,7 @@ const MapContent = ({
         />
       )}
       
-      {runPath.length > 3 && isPolygonClosed(runPath, 50) && (
+      {showPolygon && (
         <Polygon
           positions={runPath.map(p => [p.lat, p.lng])}
           pathOptions={{
@@ -88,7 +92,7 @@ const MapContent = ({
         />
       )}
       
-      {territories.map((territory) => (
+      {hasTerritories && territories.map((territory) => (
         <Polygon
           key={territory.id}
           positions={territory.coordinates.map(c => [c.lat, c.lng])}
@@ -102,7 +106,7 @@ const MapContent = ({
       ))}
     </>
   );
-};
+}
 
 export function OpenStreetMap({ isRunning, onTerritoryComplete, territories }: MapProps) {
   const [currentPosition, setCurrentPosition] = useState<[number, number] | null>(null);
