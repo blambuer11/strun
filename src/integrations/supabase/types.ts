@@ -135,6 +135,101 @@ export type Database = {
         }
         Relationships: []
       }
+      group_members: {
+        Row: {
+          group_id: string
+          id: string
+          joined_at: string | null
+          role: string | null
+          total_contribution: number | null
+          user_id: string
+          weekly_distance: number | null
+        }
+        Insert: {
+          group_id: string
+          id?: string
+          joined_at?: string | null
+          role?: string | null
+          total_contribution?: number | null
+          user_id: string
+          weekly_distance?: number | null
+        }
+        Update: {
+          group_id?: string
+          id?: string
+          joined_at?: string | null
+          role?: string | null
+          total_contribution?: number | null
+          user_id?: string
+          weekly_distance?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          avatar_url: string | null
+          city: string
+          country: string
+          created_at: string | null
+          creator_id: string
+          current_members: number | null
+          description: string | null
+          id: string
+          is_public: boolean | null
+          join_code: string | null
+          max_members: number | null
+          name: string
+          running_area: string | null
+          total_distance: number | null
+          updated_at: string | null
+          weekly_goal: number | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          city: string
+          country: string
+          created_at?: string | null
+          creator_id: string
+          current_members?: number | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          join_code?: string | null
+          max_members?: number | null
+          name: string
+          running_area?: string | null
+          total_distance?: number | null
+          updated_at?: string | null
+          weekly_goal?: number | null
+        }
+        Update: {
+          avatar_url?: string | null
+          city?: string
+          country?: string
+          created_at?: string | null
+          creator_id?: string
+          current_members?: number | null
+          description?: string | null
+          id?: string
+          is_public?: boolean | null
+          join_code?: string | null
+          max_members?: number | null
+          name?: string
+          running_area?: string | null
+          total_distance?: number | null
+          updated_at?: string | null
+          weekly_goal?: number | null
+        }
+        Relationships: []
+      }
       leaderboard_entries: {
         Row: {
           category: string
@@ -298,14 +393,20 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null
+          city: string | null
           country: string | null
           country_code: string | null
           created_at: string | null
           email: string
           id: string
           level: number | null
+          referral_code: string | null
+          referral_count: number | null
+          referral_xp_earned: number | null
+          referred_by: string | null
           total_area: number | null
           total_distance: number | null
+          total_runs: number | null
           updated_at: string | null
           user_id: string
           username: string
@@ -314,14 +415,20 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          city?: string | null
           country?: string | null
           country_code?: string | null
           created_at?: string | null
           email: string
           id?: string
           level?: number | null
+          referral_code?: string | null
+          referral_count?: number | null
+          referral_xp_earned?: number | null
+          referred_by?: string | null
           total_area?: number | null
           total_distance?: number | null
+          total_runs?: number | null
           updated_at?: string | null
           user_id: string
           username: string
@@ -330,14 +437,20 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          city?: string | null
           country?: string | null
           country_code?: string | null
           created_at?: string | null
           email?: string
           id?: string
           level?: number | null
+          referral_code?: string | null
+          referral_count?: number | null
+          referral_xp_earned?: number | null
+          referred_by?: string | null
           total_area?: number | null
           total_distance?: number | null
+          total_runs?: number | null
           updated_at?: string | null
           user_id?: string
           username?: string
@@ -619,6 +732,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      xp_transactions: {
+        Row: {
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          metadata: Json | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {
