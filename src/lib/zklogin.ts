@@ -56,7 +56,7 @@ export async function loginWithGoogle(): Promise<void> {
     
     // Google OAuth URL
     const params = new URLSearchParams({
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '',
+      client_id: '1089761021386-43lch5ha2bt1cqamdujbggdkh65jjvas.apps.googleusercontent.com',
       redirect_uri: REDIRECT_URI,
       response_type: 'id_token',
       scope: 'openid email profile',

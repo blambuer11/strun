@@ -1,7 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LogOut, Trophy, Map, Activity, Clock, Target, Award } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Heart, Smartphone } from "lucide-react";
 import { motion } from "framer-motion";
+import { useState } from "react";
+import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
 
 interface ProfileProps {
@@ -19,6 +23,11 @@ interface ProfileProps {
 }
 
 export function Profile({ user, onLogout }: ProfileProps) {
+  const [healthIntegrations, setHealthIntegrations] = useState({
+    googleHealth: false,
+    appleHealth: false
+  });
+
   const achievements = [
     { icon: Activity, title: "Total Runs", value: user.stats.totalRuns, color: "text-primary" },
     { icon: Map, title: "Distance", value: `${(user.stats.distance / 1000).toFixed(1)}km`, color: "text-accent" },
@@ -31,6 +40,19 @@ export function Profile({ user, onLogout }: ProfileProps) {
     { name: "Times Square", claimed: "1 week ago", xp: 180 },
     { name: "Brooklyn Bridge", claimed: "2 weeks ago", xp: 250 },
   ];
+
+  const handleHealthToggle = (platform: 'googleHealth' | 'appleHealth') => {
+    setHealthIntegrations(prev => ({
+      ...prev,
+      [platform]: !prev[platform]
+    }));
+    
+    if (!healthIntegrations[platform]) {
+      toast.success(`${platform === 'googleHealth' ? 'Google Health' : 'Apple Health'} connected!`);
+    } else {
+      toast.info(`${platform === 'googleHealth' ? 'Google Health' : 'Apple Health'} disconnected`);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background p-4 pb-20">
@@ -56,6 +78,41 @@ export function Profile({ user, onLogout }: ProfileProps) {
             </p>
           </div>
         </motion.div>
+
+        {/* Health Integrations */}
+        <Card className="p-4 bg-card/50 border-white/10 backdrop-blur-sm">
+          <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Heart className="w-5 h-5 text-red-500" />
+            Health Integrations
+          </h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="google-health" className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                Google Health
+              </Label>
+              <Switch
+                id="google-health"
+                checked={healthIntegrations.googleHealth}
+                onCheckedChange={() => handleHealthToggle('googleHealth')}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="apple-health" className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                Apple Health
+              </Label>
+              <Switch
+                id="apple-health"
+                checked={healthIntegrations.appleHealth}
+                onCheckedChange={() => handleHealthToggle('appleHealth')}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Connect to sync your running data and health metrics
+            </p>
+          </div>
+        </Card>
 
         {/* Achievements Grid */}
         <div>

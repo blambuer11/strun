@@ -1,16 +1,21 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Welcome } from "@/components/Welcome";
+import Dashboard from "@/components/Dashboard";
 import { MapView } from "@/components/MapView";
 import { Profile } from "@/components/Profile";
 import { Wallet } from "@/components/Wallet";
 import { BottomNav } from "@/components/BottomNav";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("home");
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [runStartTime, setRunStartTime] = useState<number | null>(null);
+  const [session, setSession] = useState<any>(null);
   const [runningStats, setRunningStats] = useState({
     distance: 0,
     time: "00:00",
@@ -19,7 +24,7 @@ const Index = () => {
 
   // User data
   const [user] = useState({
-    name: "Egemen",
+    name: "User",
     address: "0xa7b2c4e5f6789abc8f9c",
     stats: {
       totalRuns: 47,
@@ -69,6 +74,26 @@ const Index = () => {
     }
   ]);
 
+  // Check authentication on mount
+  useEffect(() => {
+    checkAuth();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setIsAuthenticated(!!session);
+      if (!session) {
+        setActiveTab("home");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    setSession(session);
+    setIsAuthenticated(!!session);
+  };
+
   // Update running stats
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -100,18 +125,25 @@ const Index = () => {
   }, [isRunning, runStartTime]);
 
   const handleGetStarted = () => {
-    setIsAuthenticated(true);
-    setActiveTab("map");
-    toast.success("Welcome to StRun! Start running to claim territories.");
+    if (!session) {
+      navigate("/auth");
+    } else {
+      setIsAuthenticated(true);
+      setActiveTab("home");
+    }
   };
 
   const handleConnectWallet = () => {
-    toast.info("Connecting to Sui wallet...");
-    setTimeout(() => {
-      setIsAuthenticated(true);
-      setActiveTab("wallet");
-      toast.success("Wallet connected successfully!");
-    }, 1500);
+    if (!session) {
+      navigate("/auth");
+    } else {
+      toast.info("Connecting to Sui wallet...");
+      setTimeout(() => {
+        setIsAuthenticated(true);
+        setActiveTab("wallet");
+        toast.success("Wallet connected successfully!");
+      }, 1500);
+    }
   };
 
   const handleStartRun = async () => {
@@ -151,8 +183,10 @@ const Index = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setIsAuthenticated(false);
+    setSession(null);
     setActiveTab("home");
     toast.info("Logged out successfully");
   };
@@ -165,8 +199,8 @@ const Index = () => {
     toast.info("XP transfer coming soon!");
   };
 
-  // If not authenticated, show welcome screen
-  if (!isAuthenticated) {
+  // Show welcome page if not authenticated
+  if (!isAuthenticated || !session) {
     return (
       <Welcome 
         onGetStarted={handleGetStarted}
@@ -180,10 +214,7 @@ const Index = () => {
       {/* Main Content */}
       <div className="h-screen overflow-hidden">
         {activeTab === "home" && (
-          <Welcome 
-            onGetStarted={() => setActiveTab("map")}
-            onConnectWallet={() => setActiveTab("wallet")}
-          />
+          <Dashboard userId={session?.user?.id} />
         )}
         
         {activeTab === "map" && (
