@@ -45,7 +45,7 @@ export default function Dashboard({ userId }: DashboardProps) {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      // Load user profile
+      // Load user profile (secure - only own data)
       const { data: profileData } = await supabase
         .from("profiles")
         .select("*")
