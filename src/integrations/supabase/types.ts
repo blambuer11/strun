@@ -775,7 +775,7 @@ export type Database = {
           level: number | null
           total_area: number | null
           total_distance: number | null
-          user_id: string | null
+          total_runs: number | null
           username: string | null
           xp: number | null
         }
@@ -788,7 +788,7 @@ export type Database = {
           level?: number | null
           total_area?: number | null
           total_distance?: number | null
-          user_id?: string | null
+          total_runs?: number | null
           username?: string | null
           xp?: number | null
         }
@@ -801,7 +801,7 @@ export type Database = {
           level?: number | null
           total_area?: number | null
           total_distance?: number | null
-          user_id?: string | null
+          total_runs?: number | null
           username?: string | null
           xp?: number | null
         }
