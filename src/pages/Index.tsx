@@ -125,25 +125,17 @@ const Index = () => {
   }, [isRunning, runStartTime]);
 
   const handleGetStarted = () => {
-    if (!session) {
-      navigate("/auth");
-    } else {
-      setIsAuthenticated(true);
-      setActiveTab("home");
-    }
+    setIsAuthenticated(true);
+    setActiveTab("home");
   };
 
   const handleConnectWallet = () => {
-    if (!session) {
-      navigate("/auth");
-    } else {
-      toast.info("Connecting to Sui wallet...");
-      setTimeout(() => {
-        setIsAuthenticated(true);
-        setActiveTab("wallet");
-        toast.success("Wallet connected successfully!");
-      }, 1500);
-    }
+    toast.info("Connecting to Sui wallet...");
+    setTimeout(() => {
+      setIsAuthenticated(true);
+      setActiveTab("wallet");
+      toast.success("Wallet connected successfully!");
+    }, 1500);
   };
 
   const handleStartRun = async () => {
@@ -200,7 +192,7 @@ const Index = () => {
   };
 
   // Show welcome page if not authenticated
-  if (!isAuthenticated || !session) {
+  if (!isAuthenticated) {
     return (
       <Welcome 
         onGetStarted={handleGetStarted}
