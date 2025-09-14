@@ -4,9 +4,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Heart, Smartphone } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
+import { healthIntegration } from "@/lib/health-integration";
+import { initializeUserWallet } from "@/lib/auto-wallet";
+import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileProps {
   user: {

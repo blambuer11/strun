@@ -146,6 +146,7 @@ const Index = () => {
           setIsRunning(true);
           setRunStartTime(Date.now());
           setRunningStats({ distance: 0, time: "00:00", pace: 0 });
+          setActiveTab("map"); // Navigate to map page
           toast.success("🏃 Run started! GPS tracking enabled.");
         },
         (error) => {
