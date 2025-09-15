@@ -11,7 +11,9 @@ import { suiClient } from './sui-config';
 import { toast } from 'sonner';
 import { toB64 } from '@mysten/sui.js/utils';
 
-const REDIRECT_URI = `${window.location.origin}/`;
+const REDIRECT_URI = window.location.origin.includes('localhost') 
+  ? 'http://localhost:5173/'
+  : `${window.location.origin}/`;
 const PROVER_URL = 'https://prover-dev.mystenlabs.com/v1';
 const SALT_SERVICE_URL = 'https://salt.api.mystenlabs.com/get_salt';
 
@@ -54,10 +56,22 @@ export async function loginWithGoogle(): Promise<void> {
   try {
     const zkLoginState = await initializeZkLogin();
     
+    // Determine the correct redirect URI based on the current origin
+    let redirectUri = REDIRECT_URI;
+    const currentOrigin = window.location.origin;
+    
+    if (currentOrigin.includes('app.strun.fun')) {
+      redirectUri = 'https://app.strun.fun/';
+    } else if (currentOrigin.includes('preview-strun.lovable.app')) {
+      redirectUri = 'https://preview-strun.lovable.app/';
+    } else if (currentOrigin.includes('localhost')) {
+      redirectUri = 'http://localhost:5173/';
+    }
+    
     // Google OAuth URL
     const params = new URLSearchParams({
       client_id: '1089761021386-43lch5ha2bt1cqamdujbggdkh65jjvas.apps.googleusercontent.com',
-      redirect_uri: REDIRECT_URI,
+      redirect_uri: redirectUri,
       response_type: 'id_token',
       scope: 'openid email profile',
       nonce: zkLoginState.nonce,

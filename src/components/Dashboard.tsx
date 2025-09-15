@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Trophy, Users, MapPin, TrendingUp, Clock, Activity, 
   Target, Award, Zap, Globe, ChevronRight, Plus,
-  UserPlus, Calendar, Flag, Mountain
+  UserPlus, Calendar, Flag, Mountain, Info
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -163,8 +163,32 @@ export default function Dashboard({ userId }: DashboardProps) {
         >
           <Card className="glass-card backdrop-blur-xl">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
+              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
                 Level & XP
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5 p-0 hover:bg-transparent"
+                  onClick={() => {
+                    toast.info(
+                      <div className="space-y-2">
+                        <h3 className="font-semibold">XP Puanlama Sistemi</h3>
+                        <ul className="text-sm space-y-1">
+                          <li>• <strong>Koşu:</strong> Her 100m = 10 XP</li>
+                          <li>• <strong>Bölge Ele Geçirme:</strong> Alan büyüklüğüne göre 50-500 XP</li>
+                          <li>• <strong>Günlük Giriş:</strong> 25 XP</li>
+                          <li>• <strong>Haftalık Hedef:</strong> 100 XP bonus</li>
+                          <li>• <strong>Grup Aktiviteleri:</strong> 2x XP çarpanı</li>
+                          <li>• <strong>Referans:</strong> Arkadaş başına 250 XP</li>
+                        </ul>
+                        <p className="text-xs text-muted-foreground mt-2">Her 1000 XP = 1 Level</p>
+                      </div>,
+                      { duration: 8000 }
+                    );
+                  }}
+                >
+                  <Info className="h-4 w-4 text-muted-foreground" />
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -273,11 +297,11 @@ export default function Dashboard({ userId }: DashboardProps) {
 
       {/* Main Content */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 glass-card">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="runs">Recent Runs</TabsTrigger>
-          <TabsTrigger value="groups">Groups</TabsTrigger>
-          <TabsTrigger value="achievements">Achievements</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 glass-card">
+          <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
+          <TabsTrigger value="runs" className="text-xs md:text-sm">Recent Runs</TabsTrigger>
+          <TabsTrigger value="groups" className="text-xs md:text-sm">Groups</TabsTrigger>
+          <TabsTrigger value="achievements" className="text-xs md:text-sm">Achievements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">

@@ -25,6 +25,34 @@ export class HealthIntegration {
   private appleHealthKit: any = null;
 
   /**
+   * Request Google Health permission (used during signup)
+   */
+  async requestGoogleHealthPermission(): Promise<boolean> {
+    try {
+      // Store consent flag for later connection
+      localStorage.setItem('google_health_consent', 'true');
+      return true;
+    } catch (error) {
+      console.error("Error requesting Google Health permission:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Request Apple Health permission (used during signup)
+   */
+  async requestAppleHealthPermission(): Promise<boolean> {
+    try {
+      // Store consent flag for later connection
+      localStorage.setItem('apple_health_consent', 'true');
+      return true;
+    } catch (error) {
+      console.error("Error requesting Apple Health permission:", error);
+      return false;
+    }
+  }
+
+  /**
    * Connect to Google Health (Google Fit)
    */
   async connectGoogleHealth(): Promise<boolean> {

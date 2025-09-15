@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated } from "@/lib/zklogin";
 import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
+import { AuthWithHealth } from "./AuthWithHealth";
 
 interface WelcomeProps {
   onGetStarted: () => void;
@@ -13,6 +14,7 @@ interface WelcomeProps {
 
 export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
   // Check for OAuth callback
   useEffect(() => {
@@ -20,7 +22,17 @@ export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
       if (window.location.hash) {
         const address = await handleOAuthCallback();
         if (address) {
-          toast.success("Successfully logged in with zkLogin!");
+          // Check if we have pending username and health consents
+          const pendingUsername = sessionStorage.getItem('pending_username');
+          if (pendingUsername) {
+            // Save the username to profile
+            toast.success(`Hoş geldiniz, ${pendingUsername}!`);
+            sessionStorage.removeItem('pending_username');
+            sessionStorage.removeItem('google_health_consent');
+            sessionStorage.removeItem('apple_health_consent');
+          } else {
+            toast.success("Successfully logged in with zkLogin!");
+          }
           onGetStarted();
         }
       } else if (isAuthenticated()) {
@@ -31,7 +43,7 @@ export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
   }, [onGetStarted]);
 
   const handleZkLogin = () => {
-    loginWithGoogle();
+    setShowAuthDialog(true);
   };
 
   return (
@@ -127,6 +139,15 @@ export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
           </motion.div>
         </div>
       </motion.div>
+      
+      <AuthWithHealth
+        open={showAuthDialog}
+        onClose={() => setShowAuthDialog(false)}
+        onSuccess={(username) => {
+          sessionStorage.setItem('pending_username', username);
+          loginWithGoogle();
+        }}
+      />
     </div>
   );
 }
