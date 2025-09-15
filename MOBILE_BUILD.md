@@ -60,7 +60,7 @@ For Google Play Store release:
 
 The app is currently configured to load from:
 ```
-https://8e42f826-5e18-40c4-bf99-45b222b02529.lovableproject.com
+https://app.strun.fun
 ```
 
 This allows hot-reload development while testing on mobile devices.
