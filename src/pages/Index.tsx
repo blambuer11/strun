@@ -207,7 +207,7 @@ const Index = () => {
       {/* Main Content */}
       <div className="h-screen overflow-hidden">
         {activeTab === "home" && (
-          <Dashboard userId={session?.user?.id} />
+          <Dashboard userId={session?.user?.id} onStartRun={handleStartRun} />
         )}
         
         {activeTab === "map" && (

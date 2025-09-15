@@ -13,7 +13,9 @@ import { toB64 } from '@mysten/sui.js/utils';
 
 const REDIRECT_URI = window.location.origin.includes('localhost') 
   ? 'http://localhost:5173/'
-  : `${window.location.origin}/`;
+  : window.location.origin.includes('lovable') 
+    ? 'https://preview-strun.lovable.app/'
+    : 'https://app.strun.fun/';
 const PROVER_URL = 'https://prover-dev.mystenlabs.com/v1';
 const SALT_SERVICE_URL = 'https://salt.api.mystenlabs.com/get_salt';
 

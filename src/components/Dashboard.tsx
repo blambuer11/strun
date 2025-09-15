@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Trophy, Users, MapPin, TrendingUp, Clock, Activity, 
   Target, Award, Zap, Globe, ChevronRight, Plus,
-  UserPlus, Calendar, Flag, Mountain, Info
+  UserPlus, Calendar, Flag, Mountain, Info, Play
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,9 +17,10 @@ import { useNavigate } from "react-router-dom";
 
 interface DashboardProps {
   userId?: string;
+  onStartRun?: () => void;
 }
 
-export default function Dashboard({ userId }: DashboardProps) {
+export default function Dashboard({ userId, onStartRun }: DashboardProps) {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({
@@ -145,10 +146,10 @@ export default function Dashboard({ userId }: DashboardProps) {
           <Button 
             variant="gradient" 
             size="lg"
-            onClick={() => navigate("/map")}
+            onClick={onStartRun}
             className="shadow-lg"
           >
-            <Activity className="mr-2" />
+            <Play className="mr-2" />
             Start Running
           </Button>
         </div>
@@ -297,11 +298,11 @@ export default function Dashboard({ userId }: DashboardProps) {
 
       {/* Main Content */}
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 glass-card">
-          <TabsTrigger value="overview" className="text-xs md:text-sm">Overview</TabsTrigger>
-          <TabsTrigger value="runs" className="text-xs md:text-sm">Recent Runs</TabsTrigger>
-          <TabsTrigger value="groups" className="text-xs md:text-sm">Groups</TabsTrigger>
-          <TabsTrigger value="achievements" className="text-xs md:text-sm">Achievements</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4 glass-card">
+          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+          <TabsTrigger value="runs" className="text-xs">Recent Runs</TabsTrigger>
+          <TabsTrigger value="groups" className="text-xs">Groups</TabsTrigger>
+          <TabsTrigger value="achievements" className="text-xs">Achievements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
