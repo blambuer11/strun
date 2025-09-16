@@ -113,7 +113,7 @@ export async function initializeZkLogin(): Promise<ZkLoginData> {
     // Create ephemeral keypair
     const ephemeralKeypair = new Ed25519Keypair();
     const secretKey = ephemeralKeypair.getSecretKey();
-    const privB64 = uint8ArrayToBase64(secretKey);
+    const privB64 = typeof secretKey === 'string' ? secretKey : uint8ArrayToBase64(secretKey as Uint8Array);
     
     // Generate randomness
     const randomness = generateRandomness();
@@ -124,7 +124,8 @@ export async function initializeZkLogin(): Promise<ZkLoginData> {
     
     // Generate nonce
     const ephemeralPublicKey = ephemeralKeypair.getPublicKey();
-    const nonce = generateNonce(ephemeralPublicKey, maxEpoch, randomness);
+    const ephemeralPublicKeyB64 = ephemeralPublicKey.toBase64();
+    const nonce = generateNonce(ephemeralPublicKeyB64 as any, maxEpoch, randomness);
 
     // Store everything in localStorage (persists across redirects)
     localStorage.setItem(STORAGE_KEYS.EPHEMERAL_PRIV, privB64);
@@ -309,7 +310,8 @@ export async function getZkLoginSignature(txBytes: Uint8Array): Promise<any> {
     const ephemeralKeypair = Ed25519Keypair.fromSecretKey(privU8);
     
     // Get extended ephemeral public key
-    const extEphPub = getExtendedEphemeralPublicKey(ephemeralKeypair.getPublicKey());
+    const ephemeralPublicKeyB64 = ephemeralKeypair.getPublicKey().toBase64();
+    const extEphPub = getExtendedEphemeralPublicKey(ephemeralPublicKeyB64 as any);
 
     // Request proof from prover
     console.log("Requesting zero-knowledge proof...");
@@ -341,7 +343,7 @@ export async function getZkLoginSignature(txBytes: Uint8Array): Promise<any> {
 
     // Sign transaction with ephemeral key
     const signature = await ephemeralKeypair.sign(txBytes);
-    const userSignatureBytes = signature instanceof Uint8Array ? signature : signature.signature;
+    const userSignatureBytes = signature instanceof Uint8Array ? signature : (signature as any).signature;
 
     if (!userSignatureBytes) {
       throw new Error("Failed to create ephemeral signature");

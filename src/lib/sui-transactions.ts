@@ -1,6 +1,6 @@
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { suiClient, PACKAGE_ID, MODULE_NAME, calculatePolygonArea } from './sui-config';
-import { getZkLoginSig, getCurrentUserAddress } from './zklogin';
+import { getZkLoginSignature, getCurrentUserAddress } from './zklogin';
 import { toast } from 'sonner';
 import { Ed25519Keypair } from '@mysten/sui.js/keypairs/ed25519';
 
@@ -170,7 +170,7 @@ async function executeTransaction(tx: TransactionBlock) {
     const bytes = await tx.build({ client: suiClient });
     
     // Get zkLogin signature
-    const zkLoginSig = await getZkLoginSig(new Uint8Array(bytes));
+    const zkLoginSig = await getZkLoginSignature(new Uint8Array(bytes));
 
     const result = await suiClient.executeTransactionBlock({
       transactionBlock: bytes,
