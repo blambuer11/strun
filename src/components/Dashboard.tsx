@@ -127,30 +127,27 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 p-4">
-      {/* Header */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-background/95 to-primary/5 p-2">
+      {/* Compact Header */}
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
+        className="mb-2"
       >
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold gradient-text">
-              Welcome back, {profile?.username}!
+            <h1 className="text-lg font-bold gradient-text">
+              {profile?.username || 'Runner'}
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Ready for your next run?
-            </p>
           </div>
           <Button 
             variant="gradient" 
-            size="lg"
+            size="sm"
             onClick={onStartRun}
             className="shadow-lg"
           >
-            <Play className="mr-2" />
-            Start Running
+            <Play className="h-3 w-3 mr-1" />
+            <span className="text-xs">Start Run</span>
           </Button>
         </div>
       </motion.div>
@@ -296,13 +293,13 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
         </motion.div>
       </div>
 
-      {/* Main Content - Mobile Optimized Tabs */}
-      <Tabs defaultValue="overview" className="space-y-2 lg:space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 glass-card h-auto">
-          <TabsTrigger value="overview" className="text-[10px] lg:text-xs py-2">Overview</TabsTrigger>
-          <TabsTrigger value="runs" className="text-[10px] lg:text-xs py-2">Recent Runs</TabsTrigger>
-          <TabsTrigger value="groups" className="text-[10px] lg:text-xs py-2">Groups</TabsTrigger>
-          <TabsTrigger value="achievements" className="text-[10px] lg:text-xs py-2">Achievements</TabsTrigger>
+      {/* Main Content - Immediately Visible */}
+      <Tabs defaultValue="overview" className="space-y-2">
+        <TabsList className="grid w-full grid-cols-4 glass-card">
+          <TabsTrigger value="overview" className="text-[11px] py-2">Overview</TabsTrigger>
+          <TabsTrigger value="runs" className="text-[11px] py-2">Recent Runs</TabsTrigger>
+          <TabsTrigger value="groups" className="text-[11px] py-2">Groups</TabsTrigger>
+          <TabsTrigger value="achievements" className="text-[11px] py-2">Achievements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
