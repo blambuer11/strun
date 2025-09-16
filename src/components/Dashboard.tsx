@@ -296,13 +296,13 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
         </motion.div>
       </div>
 
-      {/* Main Content */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 glass-card">
-          <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
-          <TabsTrigger value="runs" className="text-xs">Recent Runs</TabsTrigger>
-          <TabsTrigger value="groups" className="text-xs">Groups</TabsTrigger>
-          <TabsTrigger value="achievements" className="text-xs">Achievements</TabsTrigger>
+      {/* Main Content - Mobile Optimized Tabs */}
+      <Tabs defaultValue="overview" className="space-y-2 lg:space-y-4">
+        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 glass-card h-auto">
+          <TabsTrigger value="overview" className="text-[10px] lg:text-xs py-2">Overview</TabsTrigger>
+          <TabsTrigger value="runs" className="text-[10px] lg:text-xs py-2">Recent Runs</TabsTrigger>
+          <TabsTrigger value="groups" className="text-[10px] lg:text-xs py-2">Groups</TabsTrigger>
+          <TabsTrigger value="achievements" className="text-[10px] lg:text-xs py-2">Achievements</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">

@@ -25,9 +25,10 @@ const MAX_EPOCH_OFFSET = 10;
 // Get redirect URI
 function getRedirectUri(): string {
   const origin = window.location.origin;
-  if (origin.includes("localhost")) return "http://localhost:5173/";
-  if (origin.includes("preview-strun.lovable.app")) return "https://preview-strun.lovable.app/";
-  return "https://app.strun.fun/";
+  if (origin.includes("localhost")) return "http://localhost:5173";
+  if (origin.includes("lovableproject.com")) return origin;
+  if (origin.includes("preview-strun.lovable.app")) return "https://preview-strun.lovable.app";
+  return "https://app.strun.fun";
 }
 
 // Persistent storage keys
@@ -183,7 +184,7 @@ export async function loginWithGoogle(): Promise<void> {
   } catch (error) {
     console.error("Google login failed:", error);
     setLoginState(LoginState.IDLE);
-    toast.error("Failed to start Google login");
+    toast.error("Google girişi başarısız oldu. Lütfen tekrar deneyin.");
     throw error;
   }
 }
