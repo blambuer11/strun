@@ -392,8 +392,15 @@ export async function getZkLoginSignature(txBytes: Uint8Array): Promise<any> {
       userSignatureBytes = await ephemeral.signMessage(txBytes);
     } else if (typeof ephemeral.sign === "function") {
       // @ts-ignore
-      const s = await ephemeral.sign(txBytes);
-      userSignatureBytes = s?.signature ?? s;
+      const s: any = await ephemeral.sign(txBytes);
+      // Check if s is already a Uint8Array or has a signature property
+      if (s instanceof Uint8Array) {
+        userSignatureBytes = s;
+      } else if (s && typeof s === 'object' && 'signature' in s) {
+        userSignatureBytes = s.signature;
+      } else {
+        userSignatureBytes = s;
+      }
     } else {
       throw new Error("Ephemeral key signing method not found - adapt to SDK");
     }

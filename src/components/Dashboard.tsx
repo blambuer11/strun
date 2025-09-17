@@ -152,56 +152,44 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
         </div>
       </motion.div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Compact Stats Overview for Mobile */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.1 }}
         >
           <Card className="glass-card backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-1">
-                Level & XP
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5 p-0 hover:bg-transparent"
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-1">
+                <Trophy className="h-3 w-3 text-primary" />
+                <Info 
+                  className="h-3 w-3 text-muted-foreground cursor-pointer"
                   onClick={() => {
                     toast.info(
                       <div className="space-y-2">
-                        <h3 className="font-semibold">XP Puanlama Sistemi</h3>
-                        <ul className="text-sm space-y-1">
-                          <li>• <strong>Koşu:</strong> Her 100m = 10 XP</li>
-                          <li>• <strong>Bölge Ele Geçirme:</strong> Alan büyüklüğüne göre 50-500 XP</li>
-                          <li>• <strong>Günlük Giriş:</strong> 25 XP</li>
-                          <li>• <strong>Haftalık Hedef:</strong> 100 XP bonus</li>
-                          <li>• <strong>Grup Aktiviteleri:</strong> 2x XP çarpanı</li>
-                          <li>• <strong>Referans:</strong> Arkadaş başına 250 XP</li>
+                        <h3 className="font-semibold">XP Sistemi</h3>
+                        <ul className="text-xs space-y-1">
+                          <li>• Koşu: 100m = 10 XP</li>
+                          <li>• Bölge: 50-500 XP</li>
+                          <li>• Günlük: 25 XP</li>
+                          <li>• Haftalık: 100 XP</li>
+                          <li>• Grup: 2x XP</li>
+                          <li>• Referans: 250 XP</li>
                         </ul>
-                        <p className="text-xs text-muted-foreground mt-2">Her 1000 XP = 1 Level</p>
                       </div>,
-                      { duration: 8000 }
+                      { duration: 5000 }
                     );
                   }}
-                >
-                  <Info className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline justify-between mb-2">
-                <span className="text-2xl font-bold">
-                  Level {calculateLevel(profile?.xp || 0)}
-                </span>
-                <span className="text-sm text-accent">
-                  {profile?.xp || 0} XP
-                </span>
+                />
               </div>
-              <Progress value={calculateProgress(profile?.xp || 0)} className="h-2" />
-              <p className="text-xs text-muted-foreground mt-1">
-                {1000 - (profile?.xp % 1000)} XP to next level
-              </p>
+              <p className="text-[10px] text-muted-foreground">Level</p>
+              <p className="text-base font-bold">{calculateLevel(profile?.xp || 0)}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-accent">{profile?.xp || 0} XP</span>
+                <span className="text-[10px] text-muted-foreground">{1000 - (profile?.xp % 1000)} kalan</span>
+              </div>
+              <Progress value={calculateProgress(profile?.xp || 0)} className="h-1 mt-1" />
             </CardContent>
           </Card>
         </motion.div>
@@ -212,23 +200,15 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
           transition={{ delay: 0.2 }}
         >
           <Card className="glass-card backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Distance
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">
-                  {(stats.totalDistance / 1000).toFixed(1)}
-                </span>
-                <span className="text-sm text-muted-foreground">km</span>
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-1">
+                <Activity className="h-3 w-3 text-accent" />
               </div>
-              <div className="flex items-center gap-1 mt-1">
-                <TrendingUp className="h-3 w-3 text-accent" />
-                <span className="text-xs text-accent">
-                  +{(stats.weeklyDistance / 1000).toFixed(1)} km this week
-                </span>
+              <p className="text-[10px] text-muted-foreground">Mesafe</p>
+              <p className="text-base font-bold">{(stats.totalDistance / 1000).toFixed(1)}<span className="text-xs ml-1">km</span></p>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-2 w-2 text-accent" />
+                <span className="text-[10px] text-accent">+{(stats.weeklyDistance / 1000).toFixed(1)} km/hafta</span>
               </div>
             </CardContent>
           </Card>
@@ -240,24 +220,13 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
           transition={{ delay: 0.3 }}
         >
           <Card className="glass-card backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Territory Claimed
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">
-                  {(stats.totalArea / 10000).toFixed(1)}
-                </span>
-                <span className="text-sm text-muted-foreground">hectares</span>
-              </div>
-              <div className="flex items-center gap-1 mt-1">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-1">
                 <MapPin className="h-3 w-3 text-primary" />
-                <span className="text-xs text-primary">
-                  Across {profile?.total_runs || 0} runs
-                </span>
               </div>
+              <p className="text-[10px] text-muted-foreground">Bölge</p>
+              <p className="text-base font-bold">{(stats.totalArea / 10000).toFixed(1)}<span className="text-xs ml-1">ha</span></p>
+              <span className="text-[10px] text-primary">{profile?.total_runs || 0} koşu</span>
             </CardContent>
           </Card>
         </motion.div>
@@ -268,25 +237,17 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
           transition={{ delay: 0.4 }}
         >
           <Card className="glass-card backdrop-blur-xl">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Referrals
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">
-                  {profile?.referral_count || 0}
-                </span>
-                <Badge variant="secondary" className="ml-auto">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-1">
+                <UserPlus className="h-3 w-3 text-yellow-500" />
+              </div>
+              <p className="text-[10px] text-muted-foreground">Referans</p>
+              <p className="text-base font-bold">{profile?.referral_count || 0}</p>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-yellow-500">{profile?.referral_xp_earned || 0} XP</span>
+                <Badge variant="secondary" className="text-[8px] px-1 py-0 h-4">
                   {profile?.referral_code}
                 </Badge>
-              </div>
-              <div className="flex items-center gap-1 mt-1">
-                <Zap className="h-3 w-3 text-yellow-500" />
-                <span className="text-xs text-yellow-500">
-                  {profile?.referral_xp_earned || 0} XP earned
-                </span>
               </div>
             </CardContent>
           </Card>
