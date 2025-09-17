@@ -203,9 +203,9 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Main Content */}
-      <div className="h-screen overflow-hidden">
+    <div className="min-h-screen bg-background pb-16">
+      {/* Main Content - Changed to allow scrolling */}
+      <div className="min-h-screen overflow-y-auto pb-16">
         {activeTab === "home" && (
           <Dashboard userId={session?.user?.id} onStartRun={handleStartRun} />
         )}

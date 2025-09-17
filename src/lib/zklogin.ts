@@ -291,10 +291,13 @@ export async function handleOAuthCallback(): Promise<string | null> {
     }
 
     if (!idToken) {
+      console.error("[zklogin] No id_token found in callback");
       setLoginState(LoginState.IDLE);
-      toast.error?.("No id_token returned from provider");
+      toast.error?.("Giriş token'ı bulunamadı. Lütfen tekrar deneyin.");
       return null;
     }
+    
+    console.log("[zklogin] Processing OAuth callback with id_token");
 
     // ensure ephemeral stored state is present
     const privB64 = localStorage.getItem(STORAGE_KEYS.EPHEMERAL_PRIV);

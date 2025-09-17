@@ -17,11 +17,19 @@ export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
   // Check for OAuth callback
   useEffect(() => {
     const checkAuth = async () => {
-      if (window.location.hash) {
-        const address = await handleOAuthCallback();
-        if (address) {
-          toast.success("Successfully logged in with zkLogin!");
-          onGetStarted();
+      if (window.location.hash && window.location.hash.includes('id_token')) {
+        try {
+          const address = await handleOAuthCallback();
+          if (address) {
+            toast.success("zkLogin ile başarıyla giriş yapıldı!");
+            onGetStarted();
+          } else {
+            // Callback failed, show error
+            toast.error("Giriş işlemi başarısız. Lütfen tekrar deneyin.");
+          }
+        } catch (error) {
+          console.error('OAuth callback error:', error);
+          toast.error("Giriş işlemi sırasında bir hata oluştu.");
         }
       } else if (isAuthenticated()) {
         onGetStarted();
@@ -35,7 +43,7 @@ export function Welcome({ onGetStarted, onConnectWallet }: WelcomeProps) {
       await loginWithGoogle();
     } catch (error) {
       console.error('zkLogin error:', error);
-      toast.error('Failed to login with Google');
+      toast.error('Google ile giriş yapılamadı. Lütfen tekrar deneyin.');
     }
   };
 
