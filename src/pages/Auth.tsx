@@ -19,14 +19,14 @@ const Auth = () => {
         try {
           const address = await handleOAuthCallback();
           if (address) {
-            toast.success("zkLogin ile başarıyla giriş yapıldı!");
+            toast.success("Successfully logged in with zkLogin!");
             navigate("/home");
           } else {
-            toast.error("Giriş işlemi başarısız. Lütfen tekrar deneyin.");
+            toast.error("Login failed. Please try again.");
           }
         } catch (error) {
           console.error('OAuth callback error:', error);
-          toast.error("Giriş işlemi sırasında bir hata oluştu.");
+          toast.error("An error occurred during login.");
         }
       } else if (isAuthenticated()) {
         navigate("/home");
@@ -40,7 +40,7 @@ const Auth = () => {
       await loginWithGoogle();
     } catch (error) {
       console.error('zkLogin error:', error);
-      toast.error('Google ile giriş yapılamadı. Lütfen tekrar deneyin.');
+      toast.error('Failed to login with Google. Please try again.');
     }
   };
 
@@ -126,7 +126,7 @@ const Auth = () => {
                 onClick={handleZkLogin}
               >
                 <Wallet className="mr-2" />
-                Google ile Giriş Yap (zkLogin)
+                Login with Google (zkLogin)
               </Button>
               <Button 
                 variant="glass" 
@@ -135,7 +135,7 @@ const Auth = () => {
                 onClick={handleGuestMode}
               >
                 <Play className="mr-2" />
-                Misafir Olarak Devam Et
+                Continue as Guest
               </Button>
             </motion.div>
           </motion.div>

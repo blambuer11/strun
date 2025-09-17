@@ -293,7 +293,7 @@ export async function handleOAuthCallback(): Promise<string | null> {
     if (!idToken) {
       console.error("[zklogin] No id_token found in callback");
       setLoginState(LoginState.IDLE);
-      toast.error?.("Giriş token'ı bulunamadı. Lütfen tekrar deneyin.");
+      toast.error?.("Login token not found. Please try again.");
       return null;
     }
     
