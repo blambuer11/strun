@@ -32,9 +32,16 @@ const App = () => {
 
   useEffect(() => {
     // ✅ zkLogin callback işlemini router hazırken çalıştır
-    initService()
-      .catch((err) => console.error("zkLogin init error:", err))
-      .finally(() => setReady(true));
+    const init = async () => {
+      try {
+        await initService();
+      } catch (err) {
+        console.error("zkLogin init error:", err);
+      } finally {
+        setReady(true);
+      }
+    };
+    init();
   }, []);
 
   if (!ready) {
