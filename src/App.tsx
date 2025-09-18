@@ -11,7 +11,7 @@ import Map from "./pages/Map";
 import WalletPage from "./pages/Wallet";
 import ProfilePage from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import { isAuthenticated } from "@/lib/zklogin";
+import { isAuthenticated, initService } from "@/lib/zklogin";
 
 const queryClient = new QueryClient();
 
@@ -23,7 +23,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const App = () => {
   useEffect(() => {
     // Initialize zkLogin service on app start
-    const { initService } = require("@/lib/zklogin");
     initService();
   }, []);
 
