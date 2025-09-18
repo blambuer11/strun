@@ -15,9 +15,10 @@ import { isAuthenticated, initService } from "@/lib/zklogin";
 
 const queryClient = new QueryClient();
 
-// Protected Route wrapper
+// Protected Route wrapper - Allow guest mode if not authenticated
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  return isAuthenticated() ? <>{children}</> : <Navigate to="/auth" replace />;
+  // For now, allow access to all pages (guest mode is supported)
+  return <>{children}</>;
 };
 
 const App = () => {
