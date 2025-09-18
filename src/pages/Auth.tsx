@@ -14,6 +14,13 @@ const Auth = () => {
 
   // Check for OAuth callback
   useEffect(() => {
+    // If already authenticated and no callback in progress, redirect
+    if (isAuthenticated() && !window.location.hash.includes('id_token')) {
+      console.log("[Auth] Already authenticated, redirecting to /home");
+      navigate("/home", { replace: true });
+      return;
+    }
+
     const checkAuth = async () => {
       // Check if we have an id_token in the URL (OAuth callback)
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -27,8 +34,10 @@ const Auth = () => {
           if (address) {
             console.log("[Auth] Login successful, navigating to /home");
             toast.success("Successfully logged in with zkLogin!");
-            // Use replace to prevent going back to auth page
-            navigate("/home", { replace: true });
+            // Force navigation to home
+            setTimeout(() => {
+              navigate("/home", { replace: true });
+            }, 100);
           } else {
             console.error("[Auth] handleOAuthCallback returned null");
             toast.error("Login failed. Please try again.");
@@ -37,11 +46,9 @@ const Auth = () => {
           console.error('[Auth] OAuth callback error:', error);
           toast.error("An error occurred during login.");
         }
-      } else if (isAuthenticated()) {
-        console.log("[Auth] Already authenticated, redirecting to /home");
-        navigate("/home", { replace: true });
       }
     };
+    
     checkAuth();
   }, [navigate]);
 
