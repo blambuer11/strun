@@ -35,8 +35,9 @@ const App = () => {
     const init = async () => {
       try {
         await initService();
+        console.log("[App] zkLogin service initialized");
       } catch (err) {
-        console.error("zkLogin init error:", err);
+        console.error("[App] zkLogin init error:", err);
       } finally {
         setReady(true);
       }
@@ -46,7 +47,14 @@ const App = () => {
 
   if (!ready) {
     // ✅ Callback işlenene kadar boş ekran veya loader göster
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading StRun...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

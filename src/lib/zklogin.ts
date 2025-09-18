@@ -495,7 +495,11 @@ export async function autoHandleCallback(): Promise<string | null> {
 /**
  * initService - call on app start
  */
-export function initService(): void {
-  // run auto handler but don't block
-  autoHandleCallback().catch((e) => console.error("[zklogin] auto callback error", e));
+export async function initService(): Promise<void> {
+  // run auto handler
+  try {
+    await autoHandleCallback();
+  } catch (e) {
+    console.error("[zklogin] auto callback error", e);
+  }
 }
