@@ -321,8 +321,8 @@ export async function loginWithGoogle(): Promise<void> {
  */
 export async function handleOAuthCallback(): Promise<string | null> {
   try {
-    setLoginState(LoginState.PROCESSING_CALLBACK);
-
+    console.log("[zklogin] Starting OAuth callback processing");
+    
     // parse id_token from fragment (#id_token=...) or query
     let idToken: string | null = null;
     const hash = window.location.hash || "";
@@ -338,8 +338,6 @@ export async function handleOAuthCallback(): Promise<string | null> {
 
     if (!idToken) {
       console.error("[zklogin] No id_token found in callback");
-      setLoginState(LoginState.IDLE);
-      toast.error?.("Login token not found. Please try again.");
       return null;
     }
     
@@ -349,37 +347,38 @@ export async function handleOAuthCallback(): Promise<string | null> {
     const privB64 = localStorage.getItem(STORAGE_KEYS.EPHEMERAL_PRIV);
     const randomness = localStorage.getItem(STORAGE_KEYS.RANDOMNESS);
     const maxEpochStr = localStorage.getItem(STORAGE_KEYS.MAX_EPOCH);
+    
     if (!privB64 || !randomness || !maxEpochStr) {
-      setLoginState(LoginState.IDLE);
-      toast.error?.("Login state missing. Please try again.");
+      console.error("[zklogin] Missing ephemeral state, reinitializing...");
+      // Reinitialize if missing
+      await initializeZkLogin();
+      toast.error?.("Session expired. Please login again.");
       return null;
     }
 
-    // reconstruct ephemeral key (we may not need full key here, but keep for completeness)
-    const privU8 = base64ToUint8Array(privB64);
-    const ephemeral = reconstructKeypairFromSecret(privU8);
-
-    // compute salt - deterministic fallback (you can replace with remote salt service if desired)
+    // compute salt - deterministic fallback
     const salt = generateDeterministicSalt(idToken);
 
     // derive zkLogin address
     const zkAddress = jwtToAddress(idToken, salt);
+    console.log("[zklogin] Derived zkLogin address:", zkAddress);
 
-    // persist auth
+    // persist auth - IMPORTANT: Set all required fields
     localStorage.setItem(STORAGE_KEYS.ID_TOKEN, idToken);
     localStorage.setItem(STORAGE_KEYS.SUI_ADDRESS, zkAddress);
     localStorage.setItem(STORAGE_KEYS.USER_SALT, String(salt));
-    setLoginState(LoginState.AUTHENTICATED);
+    localStorage.setItem(STORAGE_KEYS.LOGIN_STATE, LoginState.AUTHENTICATED);
+    
+    console.log("[zklogin] Authentication successful, state set to AUTHENTICATED");
 
-    // cleanup URL (remove token fragment/query)
-    const clean = window.location.pathname;
-    window.history.replaceState(null, "", clean);
+    // cleanup URL IMMEDIATELY after storing auth
+    window.history.replaceState(null, "", window.location.pathname);
 
     toast.success?.("Signed in successfully");
     return zkAddress;
   } catch (err) {
     console.error("[zklogin] handleOAuthCallback error:", err);
-    setLoginState(LoginState.IDLE);
+    localStorage.setItem(STORAGE_KEYS.LOGIN_STATE, LoginState.IDLE);
     toast.error?.("Authentication failed");
     return null;
   }
@@ -505,7 +504,15 @@ export async function getZkLoginSignature(txBytes: Uint8Array): Promise<any> {
 export function isAuthenticated(): boolean {
   const addr = localStorage.getItem(STORAGE_KEYS.SUI_ADDRESS);
   const token = localStorage.getItem(STORAGE_KEYS.ID_TOKEN);
-  return !!(addr && token && getLoginState() === LoginState.AUTHENTICATED);
+  const loginState = localStorage.getItem(STORAGE_KEYS.LOGIN_STATE);
+  
+  const isAuth = !!(addr && token && loginState === LoginState.AUTHENTICATED);
+  console.log("[zklogin] isAuthenticated check:", isAuth, { 
+    hasAddress: !!addr, 
+    hasToken: !!token, 
+    state: loginState 
+  });
+  return isAuth;
 }
 export function getCurrentUserAddress(): string | null {
   return localStorage.getItem(STORAGE_KEYS.SUI_ADDRESS);

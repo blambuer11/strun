@@ -34,25 +34,34 @@ const App = () => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check for OAuth callback
+        // Check for OAuth callback FIRST
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
         const queryParams = new URLSearchParams(window.location.search);
         const idToken = hashParams.get('id_token') || queryParams.get('id_token');
         
         if (idToken) {
           console.log("[App] Processing OAuth callback");
+          // Don't call initService here - just handle the callback
           const address = await handleOAuthCallback();
           if (address) {
             setIsLoggedIn(true);
             toast.success("Successfully logged in with zkLogin!");
-            // Clear URL parameters
-            window.history.replaceState(null, "", window.location.pathname);
+            // URL cleanup is handled in handleOAuthCallback
+          } else {
+            // If callback failed, initialize service for retry
+            await initService();
           }
-        } else if (isAuthenticated()) {
-          setIsLoggedIn(true);
         } else {
-          // Only initialize zkLogin service if not authenticated and not handling callback
-          await initService();
+          // Check if already authenticated
+          const authenticated = isAuthenticated();
+          console.log("[App] Authentication check:", authenticated);
+          
+          if (authenticated) {
+            setIsLoggedIn(true);
+          } else {
+            // Only initialize if not authenticated and not handling callback
+            await initService();
+          }
         }
       } catch (error) {
         console.error('[App] Auth check error:', error);
