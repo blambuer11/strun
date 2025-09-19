@@ -12,16 +12,16 @@ import { initializeUserWallet } from "@/lib/auto-wallet";
 import { supabase } from "@/integrations/supabase/client";
 
 interface ProfileProps {
-  user: {
-    name: string;
-    address: string;
-    stats: {
+  user?: {
+    name?: string;
+    address?: string;
+    stats?: {
       totalRuns: number;
       distance: number;
       xpEarned: number;
       territories: number;
     };
-  };
+  } | null;
   onLogout: () => void;
 }
 
@@ -31,11 +31,19 @@ export function Profile({ user, onLogout }: ProfileProps) {
     appleHealth: false
   });
 
+  // Default values if user is null
+  const userStats = user?.stats || {
+    totalRuns: 0,
+    distance: 0,
+    xpEarned: 0,
+    territories: 0
+  };
+
   const achievements = [
-    { icon: Activity, title: "Total Runs", value: user.stats.totalRuns, color: "text-primary" },
-    { icon: Map, title: "Distance", value: `${(user.stats.distance / 1000).toFixed(1)}km`, color: "text-accent" },
-    { icon: Trophy, title: "XP Earned", value: user.stats.xpEarned.toLocaleString(), color: "text-yellow-500" },
-    { icon: Target, title: "Territories", value: user.stats.territories, color: "text-destructive" },
+    { icon: Activity, title: "Total Runs", value: userStats.totalRuns, color: "text-primary" },
+    { icon: Map, title: "Distance", value: `${(userStats.distance / 1000).toFixed(1)}km`, color: "text-accent" },
+    { icon: Trophy, title: "XP Earned", value: userStats.xpEarned.toLocaleString(), color: "text-yellow-500" },
+    { icon: Target, title: "Territories", value: userStats.territories, color: "text-destructive" },
   ];
 
   const territories = [
@@ -72,13 +80,15 @@ export function Profile({ user, onLogout }: ProfileProps) {
             transition={{ type: "spring" }}
             className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg"
           >
-            {user.name.charAt(0).toUpperCase()}
+            {(user?.name || 'U').charAt(0).toUpperCase()}
           </motion.div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">{user.name}</h2>
-            <p className="text-sm text-muted-foreground font-mono">
-              {user.address.slice(0, 6)}...{user.address.slice(-4)}
-            </p>
+            <h2 className="text-2xl font-bold text-foreground">{user?.name || 'User'}</h2>
+            {user?.address && (
+              <p className="text-sm text-muted-foreground font-mono">
+                {user.address.slice(0, 6)}...{user.address.slice(-4)}
+              </p>
+            )}
           </div>
         </motion.div>
 
