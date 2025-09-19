@@ -10,7 +10,7 @@ import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { Wallet as WalletIcon, Play, MapPin, User, Home as HomeIcon, Trophy, Settings, LogOut } from "lucide-react";
 import strunLogo from "@/assets/strun-logo-new.png";
-import { loginWithGoogle, handleOAuthCallback, isAuthenticated, logout, getCurrentUserAddress, getCurrentUserInfo } from "@/lib/zklogin";
+import { loginWithGoogle, handleOAuthCallback, isAuthenticated, logout, getCurrentUserAddress, getCurrentUserInfo, initService } from "@/lib/zklogin";
 import Dashboard from "./components/Dashboard";
 import { MapView } from "./components/MapView";
 import { Wallet } from "./components/Wallet";
@@ -45,9 +45,14 @@ const App = () => {
           if (address) {
             setIsLoggedIn(true);
             toast.success("Successfully logged in with zkLogin!");
+            // Clear URL parameters
+            window.history.replaceState(null, "", window.location.pathname);
           }
         } else if (isAuthenticated()) {
           setIsLoggedIn(true);
+        } else {
+          // Only initialize zkLogin service if not authenticated and not handling callback
+          await initService();
         }
       } catch (error) {
         console.error('[App] Auth check error:', error);

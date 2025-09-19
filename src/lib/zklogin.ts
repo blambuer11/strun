@@ -192,6 +192,10 @@ export interface ZkLoginData {
   maxEpoch: number;
 }
 
+// Initialization guard
+let isInitializing = false;
+let initPromise: Promise<ZkLoginData> | null = null;
+
 /**
  * initializeZkLogin
  * - create ephemeral keypair, randomness, nonce
@@ -199,6 +203,48 @@ export interface ZkLoginData {
  *   (we persist so state survives full redirect flow; clear on logout)
  */
 export async function initializeZkLogin(): Promise<ZkLoginData> {
+  // Return existing initialization promise if already in progress
+  if (isInitializing && initPromise) {
+    console.log("[zklogin] initialization already in progress, waiting...");
+    return initPromise;
+  }
+  
+  // Check if already initialized
+  const existingNonce = localStorage.getItem(STORAGE_KEYS.NONCE);
+  const existingPriv = localStorage.getItem(STORAGE_KEYS.EPHEMERAL_PRIV);
+  const existingRandomness = localStorage.getItem(STORAGE_KEYS.RANDOMNESS);
+  const existingMaxEpoch = localStorage.getItem(STORAGE_KEYS.MAX_EPOCH);
+  
+  if (existingNonce && existingPriv && existingRandomness && existingMaxEpoch) {
+    console.log("[zklogin] using existing ephemeral state");
+    try {
+      const privU8 = base64ToUint8Array(existingPriv);
+      const ephemeral = reconstructKeypairFromSecret(privU8);
+      return {
+        ephemeralKeypair: ephemeral,
+        randomness: existingRandomness,
+        nonce: existingNonce,
+        maxEpoch: Number(existingMaxEpoch)
+      };
+    } catch (e) {
+      console.error("[zklogin] failed to restore ephemeral state:", e);
+      // Fall through to re-initialize
+    }
+  }
+  
+  isInitializing = true;
+  initPromise = doInitialize();
+  
+  try {
+    const result = await initPromise;
+    return result;
+  } finally {
+    isInitializing = false;
+    initPromise = null;
+  }
+}
+
+async function doInitialize(): Promise<ZkLoginData> {
   try {
     setLoginState(LoginState.INITIALIZING);
     console.log("[zklogin] initializing ephemeral keypair...");
@@ -492,14 +538,25 @@ export async function autoHandleCallback(): Promise<string | null> {
   return null;
 }
 
+// Service initialization guard
+let serviceInitialized = false;
+
 /**
  * initService - call on app start
  */
 export async function initService(): Promise<void> {
+  if (serviceInitialized) {
+    console.log("[zklogin] service already initialized");
+    return;
+  }
+  
+  serviceInitialized = true;
+  
   // run auto handler
   try {
     await autoHandleCallback();
   } catch (e) {
     console.error("[zklogin] auto callback error", e);
+    serviceInitialized = false; // Reset on error
   }
 }
