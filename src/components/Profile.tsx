@@ -1,15 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Heart, Smartphone } from "lucide-react";
+import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import strunLogo from "@/assets/strun-logo-new.png";
-import { healthIntegration } from "@/lib/health-integration";
-import { initializeUserWallet } from "@/lib/auto-wallet";
 import { supabase } from "@/integrations/supabase/client";
+import { ProfileSettings } from "./ProfileSettings";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface ProfileProps {
   user?: {
@@ -26,10 +23,8 @@ interface ProfileProps {
 }
 
 export function Profile({ user, onLogout }: ProfileProps) {
-  const [healthIntegrations, setHealthIntegrations] = useState({
-    googleHealth: false,
-    appleHealth: false
-  });
+  const [showSettings, setShowSettings] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
 
   // Default values if user is null
   const userStats = user?.stats || {
@@ -37,6 +32,22 @@ export function Profile({ user, onLogout }: ProfileProps) {
     distance: 0,
     xpEarned: 0,
     territories: 0
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    const { data: authUser } = await supabase.auth.getUser();
+    if (authUser?.user) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.user.id)
+        .single();
+      setProfile(data);
+    }
   };
 
   const achievements = [

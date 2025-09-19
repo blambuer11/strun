@@ -733,6 +733,63 @@ export type Database = {
           },
         ]
       }
+      user_settings: {
+        Row: {
+          created_at: string | null
+          health_integration_apple: boolean | null
+          health_integration_google: boolean | null
+          id: string
+          language: string | null
+          location_sharing: boolean | null
+          notifications_enabled: boolean | null
+          privacy_mode: string | null
+          theme: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          health_integration_apple?: boolean | null
+          health_integration_google?: boolean | null
+          id?: string
+          language?: string | null
+          location_sharing?: boolean | null
+          notifications_enabled?: boolean | null
+          privacy_mode?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          health_integration_apple?: boolean | null
+          health_integration_google?: boolean | null
+          id?: string
+          language?: string | null
+          location_sharing?: boolean | null
+          notifications_enabled?: boolean | null
+          privacy_mode?: string | null
+          theme?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       xp_transactions: {
         Row: {
           amount: number

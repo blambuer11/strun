@@ -517,6 +517,9 @@ export function isAuthenticated(): boolean {
 export function getCurrentUserAddress(): string | null {
   return localStorage.getItem(STORAGE_KEYS.SUI_ADDRESS);
 }
+export function getAddress(): string | null {
+  return localStorage.getItem(STORAGE_KEYS.SUI_ADDRESS);
+}
 export function getCurrentUserInfo(): any | null {
   const idToken = localStorage.getItem(STORAGE_KEYS.ID_TOKEN);
   if (!idToken) return null;
