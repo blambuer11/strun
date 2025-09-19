@@ -13,7 +13,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import GroupsManager from "./GroupsManager";
-import { useNavigate } from "react-router-dom";
+
 
 interface DashboardProps {
   userId?: string;
@@ -21,7 +21,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ userId, onStartRun }: DashboardProps) {
-  const navigate = useNavigate();
+  
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({
     totalRuns: 0,
@@ -421,7 +421,7 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
                 <div className="text-center py-12">
                   <Activity className="h-12 w-12 text-muted-foreground/20 mx-auto mb-3" />
                   <p className="text-muted-foreground">No runs yet</p>
-                  <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/map")}>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={onStartRun}>
                     Start Your First Run
                   </Button>
                 </div>
