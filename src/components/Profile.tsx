@@ -1,12 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User } from "lucide-react";
+import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileSettings } from "./ProfileSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 
 interface ProfileProps {
   user?: {
@@ -25,6 +27,10 @@ interface ProfileProps {
 export function Profile({ user, onLogout }: ProfileProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [healthIntegrations, setHealthIntegrations] = useState({
+    googleHealth: false,
+    appleHealth: false
+  });
 
   // Default values if user is null
   const userStats = user?.stats || {
