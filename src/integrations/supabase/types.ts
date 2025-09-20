@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          record_id: string | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          record_id?: string | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       challenges: {
         Row: {
           category: string | null
@@ -866,7 +902,25 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      award_xp: {
+        Args: {
+          p_amount: number
+          p_description: string
+          p_metadata?: Json
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
+      update_leaderboard_entry: {
+        Args: {
+          p_category: string
+          p_period: string
+          p_user_id: string
+          p_value: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
