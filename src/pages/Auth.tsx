@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { Wallet, Play } from "lucide-react";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated } from "@/lib/zklogin";
+import { supabase } from "@/integrations/supabase/client";
+import { FirstTimeSetup } from "@/components/FirstTimeSetup";
 
 const Auth = () => {
   const navigate = useNavigate();

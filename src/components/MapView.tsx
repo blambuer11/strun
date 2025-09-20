@@ -41,6 +41,36 @@ export function MapView({
   const [xpEarned, setXpEarned] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [runTime, setRunTime] = useState("00:00");
+  const [runStartTime, setRunStartTime] = useState<number | null>(null);
+
+  // Timer effect
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
+    if (isRunning) {
+      if (!runStartTime) {
+        setRunStartTime(Date.now());
+      }
+      
+      interval = setInterval(() => {
+        if (runStartTime) {
+          const elapsed = Date.now() - runStartTime;
+          const seconds = Math.floor(elapsed / 1000);
+          const minutes = Math.floor(seconds / 60);
+          const displaySeconds = seconds % 60;
+          setRunTime(`${minutes.toString().padStart(2, "0")}:${displaySeconds.toString().padStart(2, "0")}`);
+        }
+      }, 1000);
+    } else {
+      setRunTime("00:00");
+      setRunStartTime(null);
+    }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRunning, runStartTime]);
 
   // Load existing territories
   useEffect(() => {
@@ -181,7 +211,7 @@ export function MapView({
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-foreground">
-                {isRunning ? runningStats.time : stats.territories}
+                {isRunning ? runTime : stats.territories}
               </div>
               <div className="text-xs text-muted-foreground">
                 {isRunning ? "Time" : "Territories"}
