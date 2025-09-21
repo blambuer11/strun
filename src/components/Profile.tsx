@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone } from "lucide-react";
+import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone, Edit2, Copy, Check } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
@@ -9,6 +9,7 @@ import { ProfileSettings } from "./ProfileSettings";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 
 interface ProfileProps {
   user?: {
@@ -31,6 +32,10 @@ export function Profile({ user, onLogout }: ProfileProps) {
     googleHealth: false,
     appleHealth: false
   });
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [username, setUsername] = useState(user?.name || '');
+  const [avatarUrl, setAvatarUrl] = useState('');
+  const [copied, setCopied] = useState(false);
 
   // Default values if user is null
   const userStats = user?.stats || {
@@ -91,20 +96,96 @@ export function Profile({ user, onLogout }: ProfileProps) {
           animate={{ opacity: 1, y: 0 }}
           className="text-center space-y-4 pt-8"
         >
-          <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring" }}
-            className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg"
-          >
-            {(user?.name || 'U').charAt(0).toUpperCase()}
-          </motion.div>
+          <div className="relative inline-block">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring" }}
+              className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg"
+            >
+              {(username || user?.name || 'U').charAt(0).toUpperCase()}
+            </motion.div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="absolute -bottom-1 -right-1 h-8 w-8 rounded-full bg-background border"
+              onClick={() => setEditingProfile(true)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+          </div>
           <div>
-            <h2 className="text-2xl font-bold text-foreground">{user?.name || 'User'}</h2>
-            {user?.address && (
-              <p className="text-sm text-muted-foreground font-mono">
-                {user.address.slice(0, 6)}...{user.address.slice(-4)}
-              </p>
+            {editingProfile ? (
+              <div className="space-y-2 max-w-xs mx-auto">
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Username"
+                  className="text-center"
+                />
+                <Input
+                  value={avatarUrl}
+                  onChange={(e) => setAvatarUrl(e.target.value)}
+                  placeholder="Avatar URL (optional)"
+                  className="text-center"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      const { data: authUser } = await supabase.auth.getUser();
+                      if (authUser?.user) {
+                        await supabase
+                          .from('profiles')
+                          .update({ 
+                            username, 
+                            avatar_url: avatarUrl || null 
+                          })
+                          .eq('user_id', authUser.user.id);
+                        toast.success("Profile updated!");
+                        setEditingProfile(false);
+                      }
+                    }}
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setEditingProfile(false);
+                      setUsername(user?.name || '');
+                      setAvatarUrl('');
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-foreground">{username || user?.name || 'User'}</h2>
+                {user?.address && (
+                  <div className="flex items-center justify-center gap-2 mt-2">
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {user.address.slice(0, 6)}...{user.address.slice(-4)}
+                    </p>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-6 w-6"
+                      onClick={() => {
+                        navigator.clipboard.writeText(user.address);
+                        setCopied(true);
+                        toast.success("Wallet address copied!");
+                        setTimeout(() => setCopied(false), 2000);
+                      }}
+                    >
+                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </motion.div>

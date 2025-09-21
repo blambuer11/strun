@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map } from "lucide-react";
+import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import OpenStreetMap from "./OpenStreetMap";
 import { claimTerritory, getUserTerritories, payTerritoryRent, startRunSession, completeRunSession } from "@/lib/sui-transactions";
 import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
+import { getCurrentUserInfo } from "@/lib/zklogin";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MapViewProps {
   isRunning: boolean;
@@ -76,8 +78,31 @@ export function MapView({
   useEffect(() => {
     const loadTerritories = async () => {
       try {
-        const userTerritories = await getUserTerritories();
-        setTerritories(userTerritories);
+        // Get current user info
+        const zkInfo = getCurrentUserInfo();
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        
+        // Get all regions from database
+        const { data: regions, error } = await supabase
+          .from('regions')
+          .select('*');
+        
+        if (error) {
+          console.error("Failed to load regions:", error);
+          return;
+        }
+        
+        // Format regions for map display
+        const formattedTerritories = regions?.map(region => ({
+          id: region.id,
+          name: region.name,
+          coordinates: region.coordinates as Array<{ lat: number; lng: number }>,
+          owner: region.owner_id || 'Unknown',
+          rentPrice: region.rent_price || 20,
+          isOwned: authUser?.id && region.owner_id === authUser.id
+        })) || [];
+        
+        setTerritories(formattedTerritories);
       } catch (error) {
         console.error("Failed to load territories:", error);
       }
@@ -89,7 +114,20 @@ export function MapView({
     setCanClaim(true);
     setTerritoryArea(area);
     setTerritoryPath(path);
-    toast.success(`Territory ready to claim! Area: ${(area / 10000).toFixed(2)} hectares`);
+    toast.success(`Territory ready to claim! Area: ${area.toFixed(0)} m²`);
+  };
+  
+  const handleEnterExistingTerritory = (territory: { id: string; name: string; owner: string; rentPrice: number }) => {
+    // Don't show rent modal if it's the user's own territory
+    const isOwned = territories.find(t => t.id === territory.id)?.isOwned;
+    if (isOwned) {
+      toast.info(`Welcome back to your territory: ${territory.name}`);
+      return;
+    }
+    
+    setRentTerritory(territory);
+    setShowRentModal(true);
+    toast.warning(`⚠️ You've entered ${territory.name}! Rent: ${territory.rentPrice} XP`);
   };
 
   const handleClaimTerritory = async () => {
@@ -183,10 +221,11 @@ export function MapView({
         <OpenStreetMap 
           isRunning={isRunning}
           onTerritoryComplete={handleTerritoryComplete}
+          onEnterExistingTerritory={handleEnterExistingTerritory}
           onDistanceUpdate={(distance) => {
             setCurrentDistance(distance);
-            // Calculate XP: 1 XP per 1000 meters (1km)
-            const newXp = Math.floor(distance / 1000);
+            // Calculate XP: 1 XP per 10 meters
+            const newXp = Math.floor(distance / 10);
             if (newXp > xpEarned) {
               setXpEarned(newXp);
               toast.success(`+${newXp - xpEarned} XP earned!`);
