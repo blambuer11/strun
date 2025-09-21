@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import '@/styles/map.css';
 import { toast } from 'sonner';
 import { calculateDistance, isPolygonClosed, calculatePolygonArea } from '@/lib/sui-config';
 
@@ -139,10 +140,24 @@ export default function OpenStreetMap({
 
       // Start tracking
       if (navigator.geolocation) {
+        // More aggressive tracking settings for real-time updates
         watchIdRef.current = navigator.geolocation.watchPosition(
           (position) => {
-            const { latitude, longitude } = position.coords;
+            const { latitude, longitude, accuracy } = position.coords;
             const newPos = { lat: latitude, lng: longitude };
+            
+            // Only add point if accuracy is reasonable (less than 50 meters)
+            if (accuracy > 50) {
+              console.log('Low accuracy position ignored:', accuracy);
+              return;
+            }
+            
+            // Filter out duplicate positions
+            if (lastPosRef.current && 
+                Math.abs(lastPosRef.current.lat - latitude) < 0.00001 && 
+                Math.abs(lastPosRef.current.lng - longitude) < 0.00001) {
+              return;
+            }
             
             // Update path
             pathRef.current.push(newPos);
@@ -155,43 +170,83 @@ export default function OpenStreetMap({
             }
             lastPosRef.current = newPos;
             
-            // Update map view and marker
+            // Update map view and marker with smooth panning
             if (mapRef.current) {
-              mapRef.current.setView([latitude, longitude], mapRef.current.getZoom());
+              // Smooth pan to new position instead of jumping
+              mapRef.current.panTo([latitude, longitude], { animate: true, duration: 0.5 });
               
+              // Update or create marker with custom icon
               if (markerRef.current) {
                 markerRef.current.setLatLng([latitude, longitude]);
               } else {
-                markerRef.current = L.marker([latitude, longitude]).addTo(mapRef.current);
+                const pulsingIcon = L.divIcon({
+                  className: 'pulsing-marker',
+                  html: '<div class="pulse"></div><div class="marker-pin"></div>',
+                  iconSize: [20, 20],
+                  iconAnchor: [10, 10]
+                });
+                markerRef.current = L.marker([latitude, longitude], { icon: pulsingIcon }).addTo(mapRef.current);
               }
               
-              // Update polyline - use blue color like in the reference image
+              // Update polyline with better styling
               if (polylineRef.current) {
                 polylineRef.current.setLatLngs(pathRef.current.map(p => [p.lat, p.lng]));
               } else {
                 polylineRef.current = L.polyline(
                   pathRef.current.map(p => [p.lat, p.lng]),
-                  { color: '#00B4D8', weight: 5, opacity: 0.8 }
+                  { 
+                    color: '#00B4D8', 
+                    weight: 6, 
+                    opacity: 0.9,
+                    smoothFactor: 1.0,
+                    className: 'animated-path'
+                  }
                 ).addTo(mapRef.current);
               }
               
-              // Update current polygon preview (cyan fill with dashed border)
+              // Update current polygon preview with better visibility
               if (currentPolygonRef.current) {
                 currentPolygonRef.current.remove();
                 currentPolygonRef.current = null;
               }
               
               if (pathRef.current.length >= 3) {
+                // Create filled polygon like in the reference image
                 currentPolygonRef.current = L.polygon(
                   pathRef.current.map(p => [p.lat, p.lng]),
                   { 
-                    color: '#00B4D8', 
+                    color: '#000000', 
                     fillColor: '#00E5FF',
-                    fillOpacity: 0.2,
-                    weight: 2,
-                    dashArray: '5, 10'
+                    fillOpacity: 0.35,
+                    weight: 3,
+                    dashArray: '10, 5',
+                    className: 'capturing-area'
                   }
                 ).addTo(mapRef.current);
+                
+                // Add area label
+                const area = calculatePolygonArea(pathRef.current);
+                if (area > 0) {
+                  const bounds = currentPolygonRef.current.getBounds();
+                  const center = bounds.getCenter();
+                  
+                  // Remove old label if exists
+                  if ((currentPolygonRef.current as any).label) {
+                    (currentPolygonRef.current as any).label.remove();
+                  }
+                  
+                  // Add new label
+                  const label = L.marker(center, {
+                    icon: L.divIcon({
+                      className: 'area-label',
+                      html: `<div class="area-label-content">${area.toFixed(0)}m²</div>`,
+                      iconSize: [100, 30],
+                      iconAnchor: [50, 15]
+                    })
+                  }).addTo(mapRef.current);
+                  
+                  (currentPolygonRef.current as any).label = label;
+                }
               }
               
               // Check for entering existing territories
@@ -225,8 +280,8 @@ export default function OpenStreetMap({
           },
           {
             enableHighAccuracy: true,
-            timeout: 5000,
-            maximumAge: 0
+            timeout: 3000,  // Reduced timeout for faster updates
+            maximumAge: 0  // Always get fresh position
           }
         );
       }
