@@ -4,15 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Wallet, Play } from "lucide-react";
+import { Wallet, Play, Mail } from "lucide-react";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated } from "@/lib/zklogin";
 import { supabase } from "@/integrations/supabase/client";
 import { FirstTimeSetup } from "@/components/FirstTimeSetup";
+import { EmailAuth } from "@/components/EmailAuth";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [videoLoaded, setVideoLoaded] = useState(false);
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
 
   // Check for OAuth callback
   useEffect(() => {
@@ -148,6 +150,15 @@ const Auth = () => {
                 Login with Google (zkLogin)
               </Button>
               <Button 
+                variant="outline" 
+                size="lg" 
+                className="w-full h-14 text-lg rounded-xl"
+                onClick={() => setShowEmailAuth(true)}
+              >
+                <Mail className="mr-2" />
+                Login with Email
+              </Button>
+              <Button 
                 variant="glass" 
                 size="lg" 
                 className="w-full h-14 text-lg rounded-xl"
@@ -160,6 +171,16 @@ const Auth = () => {
           </motion.div>
         </div>
       </motion.div>
+      
+      {/* Email Auth Modal */}
+      <EmailAuth
+        open={showEmailAuth}
+        onClose={() => setShowEmailAuth(false)}
+        onSuccess={() => {
+          setShowEmailAuth(false);
+          navigate("/home");
+        }}
+      />
     </div>
   );
 };

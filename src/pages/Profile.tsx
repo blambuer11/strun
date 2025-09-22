@@ -35,10 +35,22 @@ const ProfilePage = () => {
           .eq('user_id', authUser.id)
           .single();
 
+        // Try to get wallet address from profile or auto-wallet
+        let walletAddress = zkInfo?.address || profile?.wallet_address;
+        
+        // If no wallet and email user, try to get from localStorage
+        if (!walletAddress && authUser.email) {
+          const storedWallet = localStorage.getItem(`sui_wallet_${authUser.id}`);
+          if (storedWallet) {
+            const wallet = JSON.parse(storedWallet);
+            walletAddress = wallet.address;
+          }
+        }
+
         if (profile) {
           setUser({
             name: profile.username || 'User',
-            address: zkInfo?.address || '0x...',
+            address: walletAddress || '0x...',
             stats: {
               totalRuns: profile.total_runs || 0,
               distance: profile.total_distance || 0,

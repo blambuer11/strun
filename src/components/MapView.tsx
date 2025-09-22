@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle } from "lucide-react";
+import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle, Coins } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import OpenStreetMap from "./OpenStreetMap";
 import { claimTerritory, getUserTerritories, payTerritoryRent, startRunSession, completeRunSession } from "@/lib/sui-transactions";
@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { getCurrentUserInfo } from "@/lib/zklogin";
 import { supabase } from "@/integrations/supabase/client";
+import { mintLandNFT, isZoneMinted } from "@/lib/sui-land-contract";
 
 interface MapViewProps {
   isRunning: boolean;
@@ -45,6 +46,9 @@ export function MapView({
   const [showStats, setShowStats] = useState(false);
   const [runTime, setRunTime] = useState("00:00");
   const [runStartTime, setRunStartTime] = useState<number | null>(null);
+  const [showMintModal, setShowMintModal] = useState(false);
+  const [runCompleted, setRunCompleted] = useState(false);
+  const [completedPath, setCompletedPath] = useState<Array<{ lat: number; lng: number }>>([]);
 
   // Timer effect
   useEffect(() => {
@@ -282,7 +286,18 @@ export function MapView({
               variant={isRunning ? "running" : "gradient"}
               size="lg"
               className="w-full h-14 text-lg rounded-xl shadow-lg"
-              onClick={isRunning ? onStopRun : onStartRun}
+              onClick={async () => {
+                if (isRunning) {
+                  onStopRun();
+                  if (territoryPath.length > 0) {
+                    setRunCompleted(true);
+                    setCompletedPath(territoryPath);
+                    setShowMintModal(true);
+                  }
+                } else {
+                  onStartRun();
+                }
+              }}
             >
               {isRunning ? (
                 <>
@@ -327,6 +342,109 @@ export function MapView({
               className="w-full text-destructive border-destructive/50 hover:bg-destructive/10"
             >
               Decline ({rentTerritory ? rentTerritory.rentPrice * 2 : 200} XP penalty)
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* NFT Mint Modal */}
+      <Dialog open={showMintModal} onOpenChange={setShowMintModal}>
+        <DialogContent className="bg-card border-white/10 max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-xl flex items-center gap-2">
+              <Coins className="h-5 w-5 text-accent" />
+              Mint Territory NFT
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              You've completed a run in this area! Would you like to mint this territory as an NFT on Sui blockchain?
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Area</p>
+                <p className="font-semibold">{(territoryArea / 10000).toFixed(2)} ha</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">XP Earned</p>
+                <p className="font-semibold text-accent">{xpEarned} XP</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <Button 
+              variant="gradient" 
+              onClick={async () => {
+                try {
+                  if (completedPath.length > 0) {
+                    // Check if zone is already minted
+                    const isMinted = await isZoneMinted(
+                      completedPath[0].lat,
+                      completedPath[0].lng,
+                      18 // Default zoom level
+                    );
+
+                    if (isMinted) {
+                      toast.error("This area has already been minted as NFT!");
+                      setShowMintModal(false);
+                      return;
+                    }
+
+                    const territoryName = prompt("Name your territory:") || "My Territory";
+                    
+                    // Mint NFT on Sui
+                    const nftId = await mintLandNFT(
+                      completedPath,
+                      18,
+                      territoryName,
+                      `Territory captured on ${new Date().toLocaleDateString()}`
+                    );
+
+                    toast.success(`NFT Minted! ID: ${nftId.slice(0, 8)}...`);
+                    
+                    // Save to database
+                    const { data: authUser } = await supabase.auth.getUser();
+                    if (authUser?.user) {
+                      const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('id')
+                        .eq('user_id', authUser.user.id)
+                        .single();
+
+                      if (profile) {
+                        await supabase.from('regions').insert({
+                          name: territoryName,
+                          coordinates: completedPath,
+                          area: territoryArea,
+                          owner_id: profile.id,
+                          nft_id: nftId,
+                          rent_price: Math.floor(territoryArea / 100)
+                        });
+                      }
+                    }
+                  }
+                  setShowMintModal(false);
+                } catch (error) {
+                  console.error("Failed to mint NFT:", error);
+                  toast.error("Failed to mint NFT");
+                }
+              }}
+              className="w-full"
+            >
+              <Coins className="mr-2 h-4 w-4" />
+              Mint as NFT
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowMintModal(false);
+                toast.info("You can mint this territory later from your profile");
+              }}
+              className="w-full"
+            >
+              Skip for Now
             </Button>
           </div>
         </DialogContent>

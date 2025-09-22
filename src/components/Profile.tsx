@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone, Edit2, Copy, Check } from "lucide-react";
+import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone, Edit2, Copy, Check, Upload } from "lucide-react";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { ProfileSettings } from "./ProfileSettings";
@@ -36,6 +36,8 @@ export function Profile({ user, onLogout }: ProfileProps) {
   const [username, setUsername] = useState(user?.name || '');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Default values if user is null
   const userStats = user?.stats || {
@@ -58,6 +60,50 @@ export function Profile({ user, onLogout }: ProfileProps) {
         .eq('user_id', authUser.user.id)
         .single();
       setProfile(data);
+      if (data) {
+        setUsername(data.username || '');
+        setAvatarUrl(data.avatar_url || '');
+      }
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser?.user) throw new Error("Not authenticated");
+
+      // Upload to Supabase Storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${authUser.user.id}/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError, data } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      // Update profile
+      await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('user_id', authUser.user.id);
+
+      setAvatarUrl(publicUrl);
+      toast.success("Profile picture updated!");
+    } catch (error) {
+      console.error("Upload error:", error);
+      toast.error("Failed to upload profile picture");
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -97,14 +143,25 @@ export function Profile({ user, onLogout }: ProfileProps) {
           className="text-center space-y-4 pt-8"
         >
           <div className="relative inline-block">
-            <motion.div
-              initial={{ scale: 0.8 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring" }}
-              className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg"
-            >
-              {(username || user?.name || 'U').charAt(0).toUpperCase()}
-            </motion.div>
+            {avatarUrl ? (
+              <motion.img
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring" }}
+                src={avatarUrl}
+                alt="Profile"
+                className="mx-auto w-20 h-20 rounded-full object-cover shadow-lg border-2 border-primary"
+              />
+            ) : (
+              <motion.div
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring" }}
+                className="mx-auto w-20 h-20 bg-gradient-to-br from-primary to-accent rounded-full flex items-center justify-center text-3xl font-bold text-white shadow-lg"
+              >
+                {(username || user?.name || 'U').charAt(0).toUpperCase()}
+              </motion.div>
+            )}
             <Button
               size="icon"
               variant="ghost"
@@ -116,19 +173,31 @@ export function Profile({ user, onLogout }: ProfileProps) {
           </div>
           <div>
             {editingProfile ? (
-              <div className="space-y-2 max-w-xs mx-auto">
+              <div className="space-y-3 max-w-xs mx-auto">
                 <Input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Username"
                   className="text-center"
                 />
-                <Input
-                  value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="Avatar URL (optional)"
-                  className="text-center"
-                />
+                <div className="flex flex-col gap-2">
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarUpload}
+                    className="hidden"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploading ? "Uploading..." : "Upload Photo"}
+                  </Button>
+                </div>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
@@ -144,6 +213,7 @@ export function Profile({ user, onLogout }: ProfileProps) {
                           .eq('user_id', authUser.user.id);
                         toast.success("Profile updated!");
                         setEditingProfile(false);
+                        fetchProfile();
                       }
                     }}
                   >
@@ -154,8 +224,8 @@ export function Profile({ user, onLogout }: ProfileProps) {
                     variant="ghost"
                     onClick={() => {
                       setEditingProfile(false);
-                      setUsername(user?.name || '');
-                      setAvatarUrl('');
+                      setUsername(profile?.username || user?.name || '');
+                      setAvatarUrl(profile?.avatar_url || '');
                     }}
                   >
                     Cancel
