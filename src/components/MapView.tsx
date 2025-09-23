@@ -118,11 +118,44 @@ export function MapView({
     loadTerritories();
   }, []);
 
-  const handleTerritoryComplete = (territory: { path: Array<{ lat: number; lng: number }>; area: number }) => {
+  const handleTerritoryComplete = async (territory: { path: Array<{ lat: number; lng: number }>; area: number }) => {
     setCanClaim(true);
     setTerritoryArea(territory.area);
     setTerritoryPath(territory.path);
-    toast.success(`Territory ready to claim! Area: ${territory.area.toFixed(0)} m²`);
+    
+    // Automatically save territory to database
+    try {
+      const { data: authUser } = await supabase.auth.getUser();
+      if (authUser?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('user_id', authUser.user.id)
+          .single();
+
+        if (profile) {
+          const { error } = await supabase
+            .from('regions')
+            .insert({
+              owner_id: profile.id,
+              name: `Territory ${new Date().toLocaleDateString()}`,
+              coordinates: territory.path,
+              area: territory.area,
+              color: '#10B981',
+              metadata: {
+                created_from_run: true,
+                timestamp: new Date().toISOString()
+              }
+            });
+
+          if (!error) {
+            toast.success(`Territory captured! Area: ${territory.area.toFixed(0)} m² - Ready to mint as NFT`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to save territory:", error);
+    }
   };
   
   const handleEnterExistingTerritory = (territoryId: string) => {
@@ -297,13 +330,69 @@ export function MapView({
               className="w-full h-14 text-lg rounded-xl shadow-lg"
               onClick={async () => {
                 if (isRunning) {
+                  // Save run data when stopping
+                  try {
+                    const { data: authUser } = await supabase.auth.getUser();
+                    if (authUser?.user) {
+                      const { data: profile } = await supabase
+                        .from('profiles')
+                        .select('*')
+                        .eq('user_id', authUser.user.id)
+                        .single();
+
+                      if (profile && territoryPath.length > 0) {
+                        // Save run to database
+                        const runTime = Date.now() - (runStartTime || Date.now());
+                        const xp = Math.floor(currentDistance * 10 + territoryArea / 100);
+                        
+                        const { error } = await supabase
+                          .from('runs')
+                          .insert({
+                            user_id: profile.id,
+                            distance: Math.floor(currentDistance * 1000), // Convert to meters
+                            duration: Math.floor(runTime / 1000), // Convert to seconds
+                            path: territoryPath,
+                            captured_area: territoryArea > 0 ? {
+                              area: territoryArea,
+                              coordinates: territoryPath
+                            } : null,
+                            xp_earned: xp,
+                            status: 'completed',
+                            end_time: new Date().toISOString()
+                          });
+
+                        if (!error) {
+                          // Update profile stats
+                          await supabase
+                            .from('profiles')
+                            .update({
+                              total_runs: (profile.total_runs || 0) + 1,
+                              total_distance: (profile.total_distance || 0) + Math.floor(currentDistance * 1000),
+                              xp: (profile.xp || 0) + xp
+                            })
+                            .eq('id', profile.id);
+                            
+                          toast.success(`Run saved! Earned ${xp} XP`);
+                        }
+                      }
+                    }
+                  } catch (error) {
+                    console.error("Failed to save run:", error);
+                  }
+                  
                   onStopRun();
-                  if (territoryPath.length > 0) {
+                  if (territoryPath.length > 0 && territoryArea > 1000) {
                     setRunCompleted(true);
                     setCompletedPath(territoryPath);
                     setShowMintModal(true);
                   }
                 } else {
+                  // Reset stats when starting a new run
+                  setCurrentDistance(0);
+                  setXpEarned(0);
+                  setTerritoryPath([]);
+                  setTerritoryArea(0);
+                  setCanClaim(false);
                   onStartRun();
                 }
               }}

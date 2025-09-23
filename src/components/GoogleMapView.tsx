@@ -289,14 +289,15 @@ export function GoogleMapView({
           />
         )}
 
-        {/* Running path */}
+        {/* Running path - shows the trail */}
         {path.length > 1 && (
           <Polyline
             path={path}
             options={{
               strokeColor: '#10B981',
-              strokeOpacity: 0.8,
-              strokeWeight: 4,
+              strokeOpacity: 0.9,
+              strokeWeight: 5,
+              geodesic: true,
             }}
           />
         )}

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone, Edit2, Copy, Check, Upload } from "lucide-react";
+import { LogOut, Trophy, Map, Activity, Clock, Target, Award, Settings, User, Heart, Smartphone, Edit2, Copy, Check, Upload, Users } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
@@ -260,6 +260,46 @@ export function Profile({ user, onLogout }: ProfileProps) {
             )}
           </div>
         </motion.div>
+
+        {/* Referral Code Section */}
+        {profile?.referral_code && (
+          <Card className="p-4 bg-card/50 border-white/10 backdrop-blur-sm">
+            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Referral Code
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
+                <div>
+                  <p className="text-sm text-muted-foreground">Your Referral Code</p>
+                  <p className="text-lg font-mono font-bold text-primary">{profile.referral_code}</p>
+                </div>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(profile.referral_code);
+                    setCopied(true);
+                    toast.success("Referral code copied!");
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                >
+                  {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="text-center p-2 bg-background/30 rounded">
+                  <p className="text-2xl font-bold text-foreground">{profile.referral_count || 0}</p>
+                  <p className="text-xs text-muted-foreground">Referrals</p>
+                </div>
+                <div className="text-center p-2 bg-background/30 rounded">
+                  <p className="text-2xl font-bold text-accent">{profile.referral_xp_earned || 0}</p>
+                  <p className="text-xs text-muted-foreground">XP Earned</p>
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
 
         {/* Health Integrations */}
         <Card className="p-4 bg-card/50 border-white/10 backdrop-blur-sm">
