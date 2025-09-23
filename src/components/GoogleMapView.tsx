@@ -81,9 +81,9 @@ const mapOptions = {
   ]
 };
 
-// Note: You need to get a Google Maps API key from https://console.cloud.google.com/
-// Enable Maps JavaScript API and add your key below
-const GOOGLE_MAPS_API_KEY = '617841389991-nql8s14mjo5aava4ck792h1t78ks2um7.apps.googleusercontent.com'; // You need to add your Google Maps API key here
+// Google Maps API key
+// Note: In production, this should be restricted to your domain for security
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBLxwAmL1BCnMp0cLJ3kYZEWDRdWENl5vA';
 
 export function GoogleMapView({
   isRunning,
@@ -261,25 +261,8 @@ export function GoogleMapView({
     return inside;
   };
 
-  if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY.startsWith('617841389991')) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-background">
-        <div className="text-center p-8 bg-card rounded-lg shadow-lg max-w-md">
-          <h3 className="text-lg font-semibold mb-2 text-foreground">Google Maps API Key Required</h3>
-          <p className="text-muted-foreground mb-4">
-            To use Google Maps, you need to add your API key.
-          </p>
-          <ol className="text-left text-sm text-muted-foreground space-y-2">
-            <li>1. Go to <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Google Cloud Console</a></li>
-            <li>2. Create a new project or select an existing one</li>
-            <li>3. Enable "Maps JavaScript API"</li>
-            <li>4. Create credentials (API Key)</li>
-            <li>5. Add the key to this component</li>
-          </ol>
-        </div>
-      </div>
-    );
-  }
+  // Check if API key is configured
+  // No need to check since we have a valid key
 
   return (
     <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>

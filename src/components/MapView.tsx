@@ -100,8 +100,12 @@ export function MapView({
         const formattedTerritories = regions?.map(region => ({
           id: region.id,
           name: region.name,
-          coordinates: region.coordinates as Array<{ lat: number; lng: number }>,
-          owner: region.owner_id || 'Unknown',
+          path: region.coordinates as Array<{ lat: number; lng: number }>, // GoogleMapView expects 'path' not 'coordinates'
+          owner_name: region.owner_id || 'Unknown',
+          area: region.area || 0,
+          captured_at: region.created_at || new Date().toISOString(),
+          is_owner: authUser?.id && region.owner_id === authUser.id,
+          // Keep additional fields for internal use
           rentPrice: region.rent_price || 20,
           isOwned: authUser?.id && region.owner_id === authUser.id
         })) || [];
