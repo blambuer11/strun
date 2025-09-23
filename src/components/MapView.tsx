@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle, Coins } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import OpenStreetMap from "./OpenStreetMap";
+import { GoogleMapView } from "./GoogleMapView";
 import { claimTerritory, getUserTerritories, payTerritoryRent, startRunSession, completeRunSession } from "@/lib/sui-transactions";
 import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
@@ -114,17 +114,19 @@ export function MapView({
     loadTerritories();
   }, []);
 
-  const handleTerritoryComplete = (area: number, path: Array<{ lat: number; lng: number }>) => {
+  const handleTerritoryComplete = (territory: { path: Array<{ lat: number; lng: number }>; area: number }) => {
     setCanClaim(true);
-    setTerritoryArea(area);
-    setTerritoryPath(path);
-    toast.success(`Territory ready to claim! Area: ${area.toFixed(0)} m²`);
+    setTerritoryArea(territory.area);
+    setTerritoryPath(territory.path);
+    toast.success(`Territory ready to claim! Area: ${territory.area.toFixed(0)} m²`);
   };
   
-  const handleEnterExistingTerritory = (territory: { id: string; name: string; owner: string; rentPrice: number }) => {
+  const handleEnterExistingTerritory = (territoryId: string) => {
+    const territory = territories.find(t => t.id === territoryId);
+    if (!territory) return;
+    
     // Don't show rent modal if it's the user's own territory
-    const isOwned = territories.find(t => t.id === territory.id)?.isOwned;
-    if (isOwned) {
+    if (territory.isOwned) {
       toast.info(`Welcome back to your territory: ${territory.name}`);
       return;
     }
@@ -222,7 +224,7 @@ export function MapView({
 
       {/* Map Area */}
       <div className="flex-1 relative overflow-hidden">
-        <OpenStreetMap 
+        <GoogleMapView 
           isRunning={isRunning}
           onTerritoryComplete={handleTerritoryComplete}
           onEnterExistingTerritory={handleEnterExistingTerritory}
@@ -234,6 +236,9 @@ export function MapView({
               setXpEarned(newXp);
               toast.success(`+${newXp - xpEarned} XP earned!`);
             }
+          }}
+          onPathUpdate={(path) => {
+            setTerritoryPath(path);
           }}
           existingTerritories={territories}
         />

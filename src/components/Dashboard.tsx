@@ -168,14 +168,14 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
                   onClick={() => {
                     toast.info(
                       <div className="space-y-2">
-                        <h3 className="font-semibold">XP Sistemi</h3>
+                        <h3 className="font-semibold">XP System</h3>
                         <ul className="text-xs space-y-1">
-                          <li>• Koşu: 100m = 10 XP</li>
-                          <li>• Bölge: 50-500 XP</li>
-                          <li>• Günlük: 25 XP</li>
-                          <li>• Haftalık: 100 XP</li>
-                          <li>• Grup: 2x XP</li>
-                          <li>• Referans: 250 XP</li>
+                          <li>• Run: 100m = 10 XP</li>
+                          <li>• Territory: 50-500 XP</li>
+                          <li>• Daily: 25 XP</li>
+                          <li>• Weekly: 100 XP</li>
+                          <li>• Group: 2x XP</li>
+                          <li>• Referral: 500 XP</li>
                         </ul>
                       </div>,
                       { duration: 5000 }
@@ -187,7 +187,7 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
               <p className="text-base font-bold">{calculateLevel(profile?.xp || 0)}</p>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-accent">{profile?.xp || 0} XP</span>
-                <span className="text-[10px] text-muted-foreground">{1000 - (profile?.xp % 1000)} kalan</span>
+                <span className="text-[10px] text-muted-foreground">{1000 - (profile?.xp % 1000)} to next</span>
               </div>
               <Progress value={calculateProgress(profile?.xp || 0)} className="h-1 mt-1" />
             </CardContent>
@@ -204,11 +204,11 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
               <div className="flex items-center justify-between mb-1">
                 <Activity className="h-3 w-3 text-accent" />
               </div>
-              <p className="text-[10px] text-muted-foreground">Mesafe</p>
+              <p className="text-[10px] text-muted-foreground">Distance</p>
               <p className="text-base font-bold">{(stats.totalDistance / 1000).toFixed(1)}<span className="text-xs ml-1">km</span></p>
               <div className="flex items-center gap-1">
                 <TrendingUp className="h-2 w-2 text-accent" />
-                <span className="text-[10px] text-accent">+{(stats.weeklyDistance / 1000).toFixed(1)} km/hafta</span>
+                <span className="text-[10px] text-accent">+{(stats.weeklyDistance / 1000).toFixed(1)} km/week</span>
               </div>
             </CardContent>
           </Card>
@@ -224,9 +224,9 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
               <div className="flex items-center justify-between mb-1">
                 <MapPin className="h-3 w-3 text-primary" />
               </div>
-              <p className="text-[10px] text-muted-foreground">Bölge</p>
+              <p className="text-[10px] text-muted-foreground">Territory</p>
               <p className="text-base font-bold">{(stats.totalArea / 10000).toFixed(1)}<span className="text-xs ml-1">ha</span></p>
-              <span className="text-[10px] text-primary">{profile?.total_runs || 0} koşu</span>
+              <span className="text-[10px] text-primary">{profile?.total_runs || 0} runs</span>
             </CardContent>
           </Card>
         </motion.div>
@@ -241,7 +241,7 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
               <div className="flex items-center justify-between mb-1">
                 <UserPlus className="h-3 w-3 text-yellow-500" />
               </div>
-              <p className="text-[10px] text-muted-foreground">Referans</p>
+              <p className="text-[10px] text-muted-foreground">Referrals</p>
               <p className="text-base font-bold">{profile?.referral_count || 0}</p>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-yellow-500">{profile?.referral_xp_earned || 0} XP</span>

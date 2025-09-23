@@ -36,6 +36,7 @@ export function Profile({ user, onLogout }: ProfileProps) {
   const [username, setUsername] = useState(user?.name || '');
   const [avatarUrl, setAvatarUrl] = useState('');
   const [copied, setCopied] = useState(false);
+  const [walletCopied, setWalletCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -235,23 +236,23 @@ export function Profile({ user, onLogout }: ProfileProps) {
             ) : (
               <>
                 <h2 className="text-2xl font-bold text-foreground">{username || user?.name || 'User'}</h2>
-                {user?.address && (
+                {(user?.address || profile?.wallet_address) && (
                   <div className="flex items-center justify-center gap-2 mt-2">
                     <p className="text-sm text-muted-foreground font-mono">
-                      {user.address.slice(0, 6)}...{user.address.slice(-4)}
+                      {(user?.address || profile?.wallet_address || '').slice(0, 6)}...{(user?.address || profile?.wallet_address || '').slice(-4)}
                     </p>
                     <Button
                       size="icon"
                       variant="ghost"
                       className="h-6 w-6"
                       onClick={() => {
-                        navigator.clipboard.writeText(user.address);
-                        setCopied(true);
+                        navigator.clipboard.writeText(user?.address || profile?.wallet_address || '');
+                        setWalletCopied(true);
                         toast.success("Wallet address copied!");
-                        setTimeout(() => setCopied(false), 2000);
+                        setTimeout(() => setWalletCopied(false), 2000);
                       }}
                     >
-                      {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      {walletCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
                     </Button>
                   </div>
                 )}
