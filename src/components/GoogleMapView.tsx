@@ -261,7 +261,7 @@ export function GoogleMapView({
     return inside;
   };
 
-  if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY === 'YOUR_GOOGLE_MAPS_API_KEY') {
+  if (!GOOGLE_MAPS_API_KEY || GOOGLE_MAPS_API_KEY.startsWith('617841389991')) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-background">
         <div className="text-center p-8 bg-card rounded-lg shadow-lg max-w-md">
