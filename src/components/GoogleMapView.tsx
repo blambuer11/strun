@@ -275,11 +275,11 @@ export function GoogleMapView({
         options={mapOptions}
       >
         {/* User marker */}
-        {userPosition && (
+        {userPosition && map && (
           <Marker
             position={userPosition}
             icon={{
-              path: google.maps.SymbolPath.CIRCLE,
+              path: window.google?.maps?.SymbolPath?.CIRCLE || 0,
               scale: 8,
               fillColor: '#3B82F6',
               fillOpacity: 1,
