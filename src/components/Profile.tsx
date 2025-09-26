@@ -39,6 +39,7 @@ export function Profile({ user, onLogout }: ProfileProps) {
   const [walletCopied, setWalletCopied] = useState(false);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [referralLink, setReferralLink] = useState('');
 
   // Default values if user is null
   const userStats = user?.stats || {
@@ -64,6 +65,10 @@ export function Profile({ user, onLogout }: ProfileProps) {
       if (data) {
         setUsername(data.username || '');
         setAvatarUrl(data.avatar_url || '');
+        // Generate referral link
+        if (data.referral_code) {
+          setReferralLink(`${window.location.origin}/auth?ref=${data.referral_code}`);
+        }
       }
     }
   };

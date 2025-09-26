@@ -1,15 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
-import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle, Coins } from "lucide-react";
+import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle, Coins, Shield, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { GoogleMapView } from "./GoogleMapView";
-import { claimTerritory, getUserTerritories, payTerritoryRent, startRunSession, completeRunSession } from "@/lib/sui-transactions";
 import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { getCurrentUserInfo } from "@/lib/zklogin";
 import { supabase } from "@/integrations/supabase/client";
 import { mintLandNFT, isZoneMinted } from "@/lib/sui-land-contract";
+import { detectZoneFromTrace, validateRunTrace, computeZoneId, formatZoneMetadata } from "@/lib/zone-detection";
+import { awardXP, payZoneRent, applyUnauthorizedEntryPenalty, calculateRunXP, XP_CONFIG } from "@/lib/xp-economics";
+import { walrusClient } from "@/lib/walrus-client";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Progress } from "@/components/ui/progress";
 
 interface MapViewProps {
   isRunning: boolean;
@@ -27,6 +33,16 @@ interface MapViewProps {
   };
 }
 
+interface Territory {
+  id: string;
+  name: string;
+  path: Array<{ lat: number; lng: number }>;
+  area: number;
+  owner?: string;
+  rentPrice?: number;
+  color?: string;
+}
+
 export function MapView({ 
   isRunning, 
   onStartRun, 
@@ -35,20 +51,30 @@ export function MapView({
   runningStats = { distance: 0, time: "00:00", pace: 0 }
 }: MapViewProps) {
   const [showRentModal, setShowRentModal] = useState(false);
-  const [rentTerritory, setRentTerritory] = useState<any>(null);
-  const [territories, setTerritories] = useState<any[]>([]);
+  const [rentTerritory, setRentTerritory] = useState<Territory | null>(null);
+  const [territories, setTerritories] = useState<Territory[]>([]);
   const [canClaim, setCanClaim] = useState(false);
   const [territoryPath, setTerritoryPath] = useState<Array<{ lat: number; lng: number }>>([]);
   const [territoryArea, setTerritoryArea] = useState(0);
   const [currentDistance, setCurrentDistance] = useState(0);
   const [xpEarned, setXpEarned] = useState(0);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [showStats, setShowStats] = useState(false);
   const [runTime, setRunTime] = useState("00:00");
   const [runStartTime, setRunStartTime] = useState<number | null>(null);
   const [showMintModal, setShowMintModal] = useState(false);
   const [runCompleted, setRunCompleted] = useState(false);
   const [completedPath, setCompletedPath] = useState<Array<{ lat: number; lng: number }>>([]);
+  const [runTrace, setRunTrace] = useState<any>(null);
+  const [detectedZone, setDetectedZone] = useState<any>(null);
+  const [minting, setMinting] = useState(false);
+  const [rentAcceptTimer, setRentAcceptTimer] = useState<NodeJS.Timeout | null>(null);
+  const [unauthorizedEntries, setUnauthorizedEntries] = useState<Set<string>>(new Set());
+  
+  // Mint form data
+  const [zoneName, setZoneName] = useState("");
+  const [zoneDescription, setZoneDescription] = useState("");
+  const [zoneRentPrice, setZoneRentPrice] = useState(10);
+  const [mintProgress, setMintProgress] = useState(0);
 
   // Timer effect
   useEffect(() => {
@@ -82,14 +108,10 @@ export function MapView({
   useEffect(() => {
     const loadTerritories = async () => {
       try {
-        // Get current user info
-        const zkInfo = getCurrentUserInfo();
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        
         // Get all regions from database
         const { data: regions, error } = await supabase
           .from('regions')
-          .select('*');
+          .select('*, profiles!owner_id(username, avatar_url)');
         
         if (error) {
           console.error("Failed to load regions:", error);
@@ -100,14 +122,11 @@ export function MapView({
         const formattedTerritories = regions?.map(region => ({
           id: region.id,
           name: region.name,
-          path: region.coordinates as Array<{ lat: number; lng: number }>, // GoogleMapView expects 'path' not 'coordinates'
-          owner_name: region.owner_id || 'Unknown',
-          area: region.area || 0,
-          captured_at: region.created_at || new Date().toISOString(),
-          is_owner: authUser?.id && region.owner_id === authUser.id,
-          // Keep additional fields for internal use
-          rentPrice: region.rent_price || 20,
-          isOwned: authUser?.id && region.owner_id === authUser.id
+          path: region.coordinates as Array<{ lat: number; lng: number }>,
+          area: region.area,
+          owner: region.profiles?.username || 'Unknown',
+          rentPrice: region.rent_price,
+          color: region.color || '#FF6B6B'
         })) || [];
         
         setTerritories(formattedTerritories);
@@ -115,102 +134,456 @@ export function MapView({
         console.error("Failed to load territories:", error);
       }
     };
+    
     loadTerritories();
+    const interval = setInterval(loadTerritories, 30000); // Refresh every 30 seconds
+    
+    return () => clearInterval(interval);
   }, []);
 
-  const handleTerritoryComplete = async (territory: { path: Array<{ lat: number; lng: number }>; area: number }) => {
-    setCanClaim(true);
-    setTerritoryArea(territory.area);
-    setTerritoryPath(territory.path);
-    
-    // Automatically save territory to database
+  const handleStartRun = async () => {
     try {
-      const { data: authUser } = await supabase.auth.getUser();
-      if (authUser?.user) {
-        const { data: profile } = await supabase
+      // Initialize run trace
+      setRunTrace({
+        points: [],
+        distance: 0,
+        duration: 0,
+        avgSpeed: 0,
+        maxSpeed: 0
+      });
+      
+      setXpEarned(0);
+      setCurrentDistance(0);
+      setRunCompleted(false);
+      setCompletedPath([]);
+      setShowStats(true);
+      
+      onStartRun();
+      toast.success("Run started! Start moving to capture territory.");
+    } catch (error) {
+      console.error("Failed to start run:", error);
+      toast.error("Failed to start run");
+    }
+  };
+
+  const handleStopRun = async () => {
+    try {
+      if (runTrace && runTrace.points.length > 0) {
+        // Validate run trace for anti-cheat
+        const validation = validateRunTrace(runTrace);
+        
+        if (!validation.valid) {
+          toast.error("Run validation failed: " + validation.issues[0]);
+          // Still allow stopping but mark as unverified
+        }
+        
+        // Detect zone from trace
+        const zone = detectZoneFromTrace(runTrace);
+        
+        if (zone) {
+          setDetectedZone(zone);
+          setCanClaim(true);
+          setTerritoryPath(zone.polygon || []);
+          setTerritoryArea(zone.area);
+          setCompletedPath(zone.polygon || []);
+          
+          // Calculate XP earned
+          const distanceKm = currentDistance / 1000;
+          const duration = (Date.now() - (runStartTime || 0)) / 1000 / 3600; // hours
+          const earnedXP = calculateRunXP(distanceKm, duration);
+          setXpEarned(earnedXP);
+          
+          toast.success(`Zone detected! Area: ${zone.area.toFixed(0)}m². You can mint it as NFT!`);
+          setShowMintModal(true);
+        } else {
+          // Just a regular run, no zone created
+          const distanceKm = currentDistance / 1000;
+          const duration = (Date.now() - (runStartTime || 0)) / 1000 / 3600;
+          const earnedXP = calculateRunXP(distanceKm, duration);
+          
+          // Award XP for the run
+          const { data: authUser } = await supabase.auth.getUser();
+          if (authUser?.user) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('id')
+              .eq('user_id', authUser.user.id)
+              .single();
+            
+            if (profile) {
+              await awardXP(
+                profile.id,
+                earnedXP,
+                'run',
+                `Completed ${distanceKm.toFixed(2)}km run`
+              );
+            }
+          }
+          
+          toast.success(`Run completed! Distance: ${distanceKm.toFixed(2)}km, XP earned: ${earnedXP}`);
+        }
+        
+        // Get profile for saving
+        const { data: authUser2 } = await supabase.auth.getUser();
+        const { data: userProfile } = await supabase
           .from('profiles')
           .select('id')
-          .eq('user_id', authUser.user.id)
+          .eq('user_id', authUser2?.user?.id || '')
           .single();
-
-        if (profile) {
-          const { error } = await supabase
-            .from('regions')
-            .insert({
-              owner_id: profile.id,
-              name: `Territory ${new Date().toLocaleDateString()}`,
-              coordinates: territory.path,
-              area: territory.area,
-              color: '#10B981',
-              metadata: {
-                created_from_run: true,
-                timestamp: new Date().toISOString()
-              }
-            });
-
-          if (!error) {
-            toast.success(`Territory captured! Area: ${territory.area.toFixed(0)} m² - Ready to mint as NFT`);
+        
+        // Save run to Walrus
+        const runData = {
+          userId: userProfile?.id || '',
+          startTime: runStartTime || Date.now(),
+          endTime: Date.now(),
+          distance: currentDistance,
+          route: runTrace.points.map((p: any) => ({
+            lat: p.lat,
+            lng: p.lng,
+            timestamp: p.timestamp
+          })),
+          xpEarned,
+          territoriesClaimed: detectedZone ? [detectedZone.id] : []
+        };
+        
+        const blobId = await walrusClient.storeRunningSession(runData);
+        console.log("Run saved to Walrus:", blobId);
+        
+        // Save run to Supabase
+        const { data: authUser } = await supabase.auth.getUser();
+        if (authUser?.user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('user_id', authUser.user.id)
+            .single();
+          
+          if (profile) {
+            await supabase
+              .from('runs')
+              .insert({
+                user_id: profile.id,
+                distance: Math.floor(currentDistance),
+                duration: Math.floor((Date.now() - (runStartTime || 0)) / 1000),
+                path: runTrace.points,
+                xp_earned: xpEarned,
+                status: validation.valid ? 'completed' : 'unverified',
+                avg_pace: runTrace.avgSpeed,
+                max_speed: runTrace.maxSpeed
+              });
           }
         }
       }
+      
+      setRunCompleted(true);
+      onStopRun();
     } catch (error) {
-      console.error("Failed to save territory:", error);
+      console.error("Failed to stop run:", error);
+      toast.error("Failed to stop run");
+      onStopRun();
     }
   };
-  
-  const handleEnterExistingTerritory = (territoryId: string) => {
-    const territory = territories.find(t => t.id === territoryId);
-    if (!territory) return;
+
+  const handlePathUpdate = (path: Array<{ lat: number; lng: number }>) => {
+    setTerritoryPath(path);
     
-    // Don't show rent modal if it's the user's own territory
-    if (territory.isOwned) {
-      toast.info(`Welcome back to your territory: ${territory.name}`);
-      return;
+    // Update run trace
+    if (isRunning && runTrace) {
+      const newPoint = {
+        lat: path[path.length - 1].lat,
+        lng: path[path.length - 1].lng,
+        timestamp: Date.now(),
+        accuracy: 10, // Default accuracy
+        speed: runningStats.pace
+      };
+      
+      setRunTrace({
+        ...runTrace,
+        points: [...runTrace.points, newPoint],
+        distance: currentDistance,
+        duration: (Date.now() - (runStartTime || 0)) / 1000,
+        avgSpeed: runningStats.pace,
+        maxSpeed: Math.max(runTrace.maxSpeed, runningStats.pace)
+      });
+    }
+  };
+
+  const handleDistanceUpdate = (distance: number) => {
+    setCurrentDistance(distance);
+  };
+
+  const handleTerritoryComplete = async (area: number) => {
+    setTerritoryArea(area);
+    setCanClaim(true);
+    setCompletedPath([...territoryPath]);
+    
+    if (detectedZone) {
+      setShowMintModal(true);
+    }
+  };
+
+  const handleEnterExistingTerritory = async (territory: Territory) => {
+    // Check if already in unauthorized list
+    if (unauthorizedEntries.has(territory.id)) {
+      return; // Already penalized
+    }
+    
+    // Get current user
+    const { data: authUser } = await supabase.auth.getUser();
+    if (!authUser?.user) return;
+    
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('user_id', authUser.user.id)
+      .single();
+    
+    if (!profile) return;
+    
+    // Check if user owns this territory
+    const { data: region } = await supabase
+      .from('regions')
+      .select('owner_id')
+      .eq('id', territory.id)
+      .single();
+    
+    if (region?.owner_id === profile.id) {
+      return; // Owner can enter freely
     }
     
     setRentTerritory(territory);
     setShowRentModal(true);
-    toast.warning(`⚠️ You've entered ${territory.name}! Rent: ${territory.rentPrice} XP`);
+    
+    // Start 30-second timer for accepting rent
+    const timer = setTimeout(async () => {
+      if (showRentModal && rentTerritory?.id === territory.id) {
+        // User didn't accept in time - apply penalty
+        setShowRentModal(false);
+        setUnauthorizedEntries(prev => new Set(prev).add(territory.id));
+        
+        await applyUnauthorizedEntryPenalty(
+          profile.id,
+          territory.id,
+          territory.rentPrice || XP_CONFIG.ZONE_RENT_PERCENTAGE * 100
+        );
+        
+        toast.error("Unauthorized entry penalty applied!");
+      }
+    }, 30000);
+    
+    setRentAcceptTimer(timer);
   };
 
-  const handleClaimTerritory = async () => {
-    if (!canClaim || !isRunning) return;
+  const handleMintZone = async () => {
+    if (!detectedZone || !zoneName) {
+      toast.error("Please provide a name for your zone");
+      return;
+    }
+    
+    setMinting(true);
+    setMintProgress(10);
     
     try {
-      const territoryName = prompt("Name your territory:") || "My Territory";
-      const rentPrice = Math.floor(territoryArea / 100); // 1 XP per 100m²
+      // Get current user
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser?.user) throw new Error("Not authenticated");
       
-      await claimTerritory({
-        name: territoryName,
-        coordinates: territoryPath,
-        area: territoryArea,
-        rentPrice,
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', authUser.user.id)
+        .single();
+      
+      if (!profile) throw new Error("Profile not found");
+      
+      setMintProgress(20);
+      
+      // Check if zone already minted
+      const { zoneId } = computeZoneId(detectedZone.bbox, detectedZone.zoom);
+      const alreadyMinted = await isZoneMinted(
+        detectedZone.bbox.latMin,
+        detectedZone.bbox.lonMin,
+        detectedZone.zoom
+      );
+      
+      if (alreadyMinted) {
+        toast.error("This zone has already been minted!");
+        setMinting(false);
+        return;
+      }
+      
+      setMintProgress(40);
+      
+      // Format metadata
+      const metadata = formatZoneMetadata(detectedZone, profile.username || profile.email, {
+        name: zoneName,
+        description: zoneDescription,
+        rentPrice: zoneRentPrice,
+        createdBy: profile.id,
+        runStats: {
+          distance: currentDistance,
+          duration: Date.now() - (runStartTime || 0),
+          xpEarned
+        }
       });
       
-      toast.success(`Territory "${territoryName}" claimed! You earned ${Math.floor(territoryArea / 10)} XP!`);
-      setCanClaim(false);
+      setMintProgress(60);
+      
+      // Store metadata in Walrus
+      const metadataBlobId = await walrusClient.storeBlob(JSON.stringify(metadata));
+      console.log("Metadata stored in Walrus:", metadataBlobId);
+      
+      setMintProgress(80);
+      
+      // Mint NFT on Sui
+      const coordinates = detectedZone.polygon || [
+        { lat: detectedZone.bbox.latMin, lng: detectedZone.bbox.lonMin },
+        { lat: detectedZone.bbox.latMax, lng: detectedZone.bbox.lonMin },
+        { lat: detectedZone.bbox.latMax, lng: detectedZone.bbox.lonMax },
+        { lat: detectedZone.bbox.latMin, lng: detectedZone.bbox.lonMax }
+      ];
+      
+      const nftId = await mintLandNFT(
+        coordinates,
+        detectedZone.zoom,
+        zoneName,
+        zoneDescription
+      );
+      
+      setMintProgress(90);
+      
+      // Save to database
+      await supabase
+        .from('regions')
+        .insert({
+          id: zoneId,
+          name: zoneName,
+          description: zoneDescription,
+          coordinates: detectedZone.polygon,
+          area: detectedZone.area,
+          owner_id: profile.id,
+          rent_price: zoneRentPrice,
+          nft_id: nftId,
+          metadata: metadata,
+          color: `#${Math.floor(Math.random()*16777215).toString(16)}`
+        });
+      
+      // Award XP for zone creation
+      await awardXP(
+        profile.id,
+        XP_CONFIG.XP_PER_ZONE_CREATION,
+        'zone',
+        `Created zone: ${zoneName}`
+      );
+      
+      // Check if first zone for bonus
+      const { count } = await supabase
+        .from('regions')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', profile.id);
+      
+      if (count === 1) {
+        await awardXP(
+          profile.id,
+          XP_CONFIG.XP_BONUS_FIRST_ZONE,
+          'bonus',
+          'First zone bonus!'
+        );
+      }
+      
+      setMintProgress(100);
+      
+      toast.success(`Zone "${zoneName}" minted successfully! NFT ID: ${nftId}`);
       
       // Reload territories
-      const updatedTerritories = await getUserTerritories();
-      setTerritories(updatedTerritories);
+      const { data: regions } = await supabase
+        .from('regions')
+        .select('*, profiles!owner_id(username, avatar_url)');
       
-      onStopRun();
+      const formattedTerritories = regions?.map(region => ({
+        id: region.id,
+        name: region.name,
+        path: region.coordinates as Array<{ lat: number; lng: number }>,
+        area: region.area,
+        owner: region.profiles?.username || 'Unknown',
+        rentPrice: region.rent_price,
+        color: region.color || '#FF6B6B'
+      })) || [];
+      
+      setTerritories(formattedTerritories);
+      
+      // Reset states
+      setShowMintModal(false);
+      setCanClaim(false);
+      setDetectedZone(null);
+      setZoneName("");
+      setZoneDescription("");
+      setZoneRentPrice(10);
     } catch (error) {
-      console.error("Failed to claim territory:", error);
-      toast.error("Failed to claim territory. Please try again.");
+      console.error("Failed to mint zone:", error);
+      toast.error("Failed to mint zone: " + error.message);
+    } finally {
+      setMinting(false);
+      setMintProgress(0);
     }
   };
-  
+
   const handlePayRent = async () => {
     if (!rentTerritory) return;
     
     try {
-      await payTerritoryRent(
+      // Clear timer since user accepted
+      if (rentAcceptTimer) {
+        clearTimeout(rentAcceptTimer);
+        setRentAcceptTimer(null);
+      }
+      
+      // Get current user
+      const { data: authUser } = await supabase.auth.getUser();
+      if (!authUser?.user) throw new Error("Not authenticated");
+      
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', authUser.user.id)
+        .single();
+      
+      if (!profile) throw new Error("Profile not found");
+      
+      // Get territory owner
+      const { data: region } = await supabase
+        .from('regions')
+        .select('owner_id')
+        .eq('id', rentTerritory.id)
+        .single();
+      
+      if (!region?.owner_id) throw new Error("Territory owner not found");
+      
+      // Process payment
+      const rentAmount = rentTerritory.rentPrice || 10;
+      const { success, error } = await payZoneRent(
+        profile.id,
+        region.owner_id,
         rentTerritory.id,
-        rentTerritory.owner,
-        rentTerritory.rentPrice
+        rentAmount
       );
-      toast.success(`Paid ${rentTerritory.rentPrice} XP rent to territory owner`);
+      
+      if (success) {
+        toast.success(`Rent paid: ${rentAmount} XP`);
+        
+        // Record visit
+        await supabase
+          .from('regions')
+          .update({
+            visitors: supabase.rpc('increment', { x: 1 }),
+            last_visited: new Date().toISOString(),
+            total_earnings: supabase.rpc('increment', { x: rentAmount })
+          })
+          .eq('id', rentTerritory.id);
+      } else {
+        toast.error(error || "Failed to pay rent");
+      }
+      
       setShowRentModal(false);
       setRentTerritory(null);
     } catch (error) {
@@ -218,331 +591,313 @@ export function MapView({
       toast.error("Failed to pay rent");
     }
   };
-  
+
   const handleDeclineRent = () => {
-    if (rentTerritory) {
-      const penalty = rentTerritory.rentPrice * 2;
-      toast.warning(`Penalty: ${penalty} XP will be deducted`);
-    }
+    // User declined - will be penalized after timer
     setShowRentModal(false);
-    setRentTerritory(null);
+    toast.warning("You have 30 seconds to leave the zone or face a penalty!");
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="relative h-screen w-full bg-black overflow-hidden">
       {/* Header */}
-      <div className="glass-card backdrop-blur-xl border-b border-white/10 z-10">
-        <div className="flex items-center justify-between p-4">
+      <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/80 to-transparent p-4">
+        <div className="flex items-center justify-between">
+          <img src={strunLogo} alt="STRUN" className="h-8" />
           <div className="flex items-center gap-3">
-            <img 
-              src={strunLogo} 
-              alt="StRun Logo" 
-              className="h-10 w-auto object-contain"
-            />
-            <div>
-              <p className="text-xs text-muted-foreground">
-                {isRunning ? (
-                  <span className="flex items-center gap-1">
-                    <Radio className="w-3 h-3 text-destructive animate-pulse" />
-                    Running...
-                  </span>
-                ) : (
-                  "Ready to run"
-                )}
-              </p>
+            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+              <Radio className="w-4 h-4 text-green-400" />
+              <span className="text-xs text-white">GPS Active</span>
             </div>
-          </div>
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <Battery className="w-4 h-4" />
-            <span className="text-sm">89%</span>
+            <div className="flex items-center gap-1 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1">
+              <Battery className="w-4 h-4 text-white" />
+              <span className="text-xs text-white">87%</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Map Area */}
-      <div className="flex-1 relative overflow-hidden">
-        <GoogleMapView 
-          isRunning={isRunning}
-          onTerritoryComplete={handleTerritoryComplete}
-          onEnterExistingTerritory={handleEnterExistingTerritory}
-          onDistanceUpdate={(distance) => {
-            setCurrentDistance(distance);
-            // Calculate XP: 1 XP per 10 meters
-            const newXp = Math.floor(distance / 10);
-            if (newXp > xpEarned) {
-              setXpEarned(newXp);
-              toast.success(`+${newXp - xpEarned} XP earned!`);
-            }
-          }}
-          onPathUpdate={(path) => {
-            setTerritoryPath(path);
-          }}
-          existingTerritories={territories}
-        />
-      </div>
+      {/* Map */}
+      <GoogleMapView
+        isRunning={isRunning}
+        onPathUpdate={handlePathUpdate}
+        onDistanceUpdate={handleDistanceUpdate}
+        onTerritoryComplete={handleTerritoryComplete}
+        onEnterExistingTerritory={handleEnterExistingTerritory}
+        existingTerritories={territories}
+      />
+
+      {/* Stats Overlay */}
+      <AnimatePresence>
+        {showStats && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-4 right-4 z-10"
+          >
+            <div className="bg-black/80 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <p className="text-xs text-gray-400">Distance</p>
+                  <p className="text-xl font-bold text-white">
+                    {(currentDistance / 1000).toFixed(2)} km
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">Time</p>
+                  <p className="text-xl font-bold text-white">{runTime}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-400">XP Earned</p>
+                  <p className="text-xl font-bold text-cyan-400">+{xpEarned}</p>
+                </div>
+              </div>
+              {detectedZone && (
+                <div className="mt-3 pt-3 border-t border-white/10">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-green-400" />
+                      <span className="text-sm text-white">Zone Detected</span>
+                    </div>
+                    <span className="text-sm text-cyan-400">
+                      {detectedZone.area.toFixed(0)} m²
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom Controls */}
-      <div className="glass-card backdrop-blur-xl border-t border-white/10 pb-20">
-        <div className="p-4 space-y-4">
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-accent">
-                {isRunning ? currentDistance.toFixed(0) : stats.xp}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {isRunning ? "Meters" : "XP"}
-              </div>
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black to-transparent p-4 pb-8">
+        <div className="max-w-md mx-auto space-y-4">
+          {/* XP and Territory Stats */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-2">
+              <Zap className="w-4 h-4 text-cyan-400" />
+              <span className="text-sm font-semibold text-white">{stats.xp} XP</span>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-foreground">
-                {isRunning ? runTime : stats.territories}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {isRunning ? "Time" : "Territories"}
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-foreground">
-                {isRunning ? `${xpEarned} XP` : `${(stats.distance / 1000).toFixed(1)}km`}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {isRunning ? "Earned" : "Today"}
-              </div>
+            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-full px-3 py-2">
+              <Map className="w-4 h-4 text-purple-400" />
+              <span className="text-sm font-semibold text-white">{territories.length} Zones</span>
             </div>
           </div>
 
-          {/* Run Button */}
-          {canClaim && isRunning ? (
-            <Button
-              variant="gradient"
-              size="lg"
-              className="w-full h-14 text-lg rounded-xl animate-pulse"
-              onClick={handleClaimTerritory}
-            >
-              <MapPin className="mr-2" />
-              Claim Territory ({(territoryArea / 10000).toFixed(2)} ha)
-            </Button>
-          ) : (
-            <Button
-              variant={isRunning ? "running" : "gradient"}
-              size="lg"
-              className="w-full h-14 text-lg rounded-xl shadow-lg"
-              onClick={async () => {
-                if (isRunning) {
-                  // Save run data when stopping
-                  try {
-                    const { data: authUser } = await supabase.auth.getUser();
-                    if (authUser?.user) {
-                      const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('*')
-                        .eq('user_id', authUser.user.id)
-                        .single();
-
-                      if (profile && territoryPath.length > 0) {
-                        // Save run to database
-                        const runTime = Date.now() - (runStartTime || Date.now());
-                        const xp = Math.floor(currentDistance * 10 + territoryArea / 100);
-                        
-                        const { error } = await supabase
-                          .from('runs')
-                          .insert({
-                            user_id: profile.id,
-                            distance: Math.floor(currentDistance * 1000), // Convert to meters
-                            duration: Math.floor(runTime / 1000), // Convert to seconds
-                            path: territoryPath,
-                            captured_area: territoryArea > 0 ? {
-                              area: territoryArea,
-                              coordinates: territoryPath
-                            } : null,
-                            xp_earned: xp,
-                            status: 'completed',
-                            end_time: new Date().toISOString()
-                          });
-
-                        if (!error) {
-                          // Update profile stats
-                          await supabase
-                            .from('profiles')
-                            .update({
-                              total_runs: (profile.total_runs || 0) + 1,
-                              total_distance: (profile.total_distance || 0) + Math.floor(currentDistance * 1000),
-                              xp: (profile.xp || 0) + xp
-                            })
-                            .eq('id', profile.id);
-                            
-                          toast.success(`Run saved! Earned ${xp} XP`);
-                        }
-                      }
-                    }
-                  } catch (error) {
-                    console.error("Failed to save run:", error);
-                  }
-                  
-                  onStopRun();
-                  if (territoryPath.length > 0 && territoryArea > 1000) {
-                    setRunCompleted(true);
-                    setCompletedPath(territoryPath);
-                    setShowMintModal(true);
-                  }
-                } else {
-                  // Reset stats when starting a new run
-                  setCurrentDistance(0);
-                  setXpEarned(0);
-                  setTerritoryPath([]);
-                  setTerritoryArea(0);
-                  setCanClaim(false);
-                  onStartRun();
-                }
-              }}
-            >
-              {isRunning ? (
-                <>
-                  <Square className="mr-2" />
-                  Stop Running
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2" />
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            {!isRunning ? (
+              <>
+                <Button
+                  onClick={handleStartRun}
+                  className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-bold py-6 rounded-2xl shadow-lg shadow-cyan-500/25"
+                >
+                  <Play className="mr-2 h-5 w-5" />
                   Start Run
-                </>
-              )}
-            </Button>
-          )}
+                </Button>
+                {runCompleted && detectedZone && (
+                  <Button
+                    onClick={() => setShowMintModal(true)}
+                    className="flex-1 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-6 rounded-2xl shadow-lg shadow-purple-500/25"
+                  >
+                    <MapPin className="mr-2 h-5 w-5" />
+                    Mint Zone
+                  </Button>
+                )}
+              </>
+            ) : (
+              <Button
+                onClick={handleStopRun}
+                className="flex-1 bg-gradient-to-r from-red-500 to-orange-600 hover:from-red-600 hover:to-orange-700 text-white font-bold py-6 rounded-2xl shadow-lg shadow-red-500/25"
+              >
+                <Square className="mr-2 h-5 w-5" />
+                Stop Run
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Rent Modal */}
       <Dialog open={showRentModal} onOpenChange={setShowRentModal}>
-        <DialogContent className="bg-card border-white/10 max-w-sm">
+        <DialogContent className="bg-gray-900 border-gray-800 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl">🏃‍♂️ Territory Entry</DialogTitle>
-            <DialogDescription className="text-muted-foreground pt-2">
-              {rentTerritory ? (
-                <>You've entered {rentTerritory.name}. Pay {rentTerritory.rentPrice} XP rent to continue?</>
-              ) : (
-                <>You've entered a territory. Pay rent to continue?</>
-              )}
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-yellow-500" />
+              Entering Territory
+            </DialogTitle>
+            <DialogDescription className="text-gray-400">
+              You are entering a territory owned by another user.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col gap-3 pt-4">
-            <Button 
-              variant="gradient" 
+          <div className="space-y-4 py-4">
+            {rentTerritory && (
+              <>
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <p className="text-sm text-gray-400">Territory</p>
+                  <p className="font-semibold">{rentTerritory.name}</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Owner: {rentTerritory.owner}
+                  </p>
+                </div>
+                <div className="bg-gray-800 rounded-lg p-4">
+                  <p className="text-sm text-gray-400">Rent Cost</p>
+                  <p className="text-2xl font-bold text-cyan-400">
+                    {rentTerritory.rentPrice} XP
+                  </p>
+                </div>
+                <div className="bg-yellow-900/20 border border-yellow-600/30 rounded-lg p-3">
+                  <p className="text-sm text-yellow-400">
+                    ⚠️ You have 30 seconds to accept or leave the zone.
+                    Unauthorized entry will result in a 2x penalty!
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="flex gap-3">
+            <Button
               onClick={handlePayRent}
-              className="w-full"
+              className="flex-1 bg-green-600 hover:bg-green-700"
             >
-              Pay {rentTerritory?.rentPrice || 100} XP
+              <Coins className="mr-2 h-4 w-4" />
+              Pay Rent
             </Button>
-            <Button 
-              variant="outline" 
+            <Button
               onClick={handleDeclineRent}
-              className="w-full text-destructive border-destructive/50 hover:bg-destructive/10"
+              variant="outline"
+              className="flex-1 border-gray-700 text-gray-300 hover:bg-gray-800"
             >
-              Decline ({rentTerritory ? rentTerritory.rentPrice * 2 : 200} XP penalty)
+              Decline
             </Button>
           </div>
         </DialogContent>
       </Dialog>
 
-      {/* NFT Mint Modal */}
+      {/* Mint NFT Modal */}
       <Dialog open={showMintModal} onOpenChange={setShowMintModal}>
-        <DialogContent className="bg-card border-white/10 max-w-sm">
+        <DialogContent className="bg-gray-900 border-gray-800 text-white max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl flex items-center gap-2">
-              <Coins className="h-5 w-5 text-accent" />
-              Mint Territory NFT
+            <DialogTitle className="flex items-center gap-2">
+              <MapPin className="w-5 h-5 text-purple-500" />
+              Mint Zone as NFT
             </DialogTitle>
-            <DialogDescription className="text-muted-foreground pt-2">
-              You've completed a run in this area! Would you like to mint this territory as an NFT on Sui blockchain?
+            <DialogDescription className="text-gray-400">
+              Claim your captured territory on the blockchain
             </DialogDescription>
           </DialogHeader>
-          
           <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-muted-foreground">Area</p>
-                <p className="font-semibold">{(territoryArea / 10000).toFixed(2)} ha</p>
+            {detectedZone && (
+              <div className="bg-gray-800 rounded-lg p-4">
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <p className="text-gray-400">Area</p>
+                    <p className="font-semibold">{detectedZone.area.toFixed(0)} m²</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Perimeter</p>
+                    <p className="font-semibold">{detectedZone.perimeter.toFixed(0)} m</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">Zone ID</p>
+                    <p className="font-mono text-xs">{detectedZone.id.slice(0, 10)}...</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-400">XP Reward</p>
+                    <p className="font-semibold text-cyan-400">+{XP_CONFIG.XP_PER_ZONE_CREATION}</p>
+                  </div>
+                </div>
               </div>
+            )}
+            
+            <div className="space-y-3">
               <div>
-                <p className="text-muted-foreground">XP Earned</p>
-                <p className="font-semibold text-accent">{xpEarned} XP</p>
+                <Label htmlFor="zone-name" className="text-gray-300">Zone Name *</Label>
+                <Input
+                  id="zone-name"
+                  value={zoneName}
+                  onChange={(e) => setZoneName(e.target.value)}
+                  placeholder="Enter a unique name for your zone"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  maxLength={50}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="zone-desc" className="text-gray-300">Description</Label>
+                <Textarea
+                  id="zone-desc"
+                  value={zoneDescription}
+                  onChange={(e) => setZoneDescription(e.target.value)}
+                  placeholder="Describe your zone (optional)"
+                  className="bg-gray-800 border-gray-700 text-white"
+                  rows={3}
+                  maxLength={200}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="rent-price" className="text-gray-300">
+                  Rent Price (XP per entry)
+                </Label>
+                <Input
+                  id="rent-price"
+                  type="number"
+                  value={zoneRentPrice}
+                  onChange={(e) => setZoneRentPrice(Math.max(1, parseInt(e.target.value) || 1))}
+                  min={1}
+                  max={100}
+                  className="bg-gray-800 border-gray-700 text-white"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Other users pay this when entering your zone
+                </p>
               </div>
             </div>
+            
+            {minting && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400">Minting progress</span>
+                  <span className="text-cyan-400">{mintProgress}%</span>
+                </div>
+                <Progress value={mintProgress} className="h-2" />
+                <p className="text-xs text-gray-500">
+                  {mintProgress < 20 && "Initializing..."}
+                  {mintProgress >= 20 && mintProgress < 40 && "Checking uniqueness..."}
+                  {mintProgress >= 40 && mintProgress < 60 && "Preparing metadata..."}
+                  {mintProgress >= 60 && mintProgress < 80 && "Storing on Walrus..."}
+                  {mintProgress >= 80 && mintProgress < 100 && "Minting NFT on Sui..."}
+                  {mintProgress === 100 && "Complete!"}
+                </p>
+              </div>
+            )}
           </div>
-
-          <div className="flex flex-col gap-3">
-            <Button 
-              variant="gradient" 
-              onClick={async () => {
-                try {
-                  if (completedPath.length > 0) {
-                    // Check if zone is already minted
-                    const isMinted = await isZoneMinted(
-                      completedPath[0].lat,
-                      completedPath[0].lng,
-                      18 // Default zoom level
-                    );
-
-                    if (isMinted) {
-                      toast.error("This area has already been minted as NFT!");
-                      setShowMintModal(false);
-                      return;
-                    }
-
-                    const territoryName = prompt("Name your territory:") || "My Territory";
-                    
-                    // Mint NFT on Sui
-                    const nftId = await mintLandNFT(
-                      completedPath,
-                      18,
-                      territoryName,
-                      `Territory captured on ${new Date().toLocaleDateString()}`
-                    );
-
-                    toast.success(`NFT Minted! ID: ${nftId.slice(0, 8)}...`);
-                    
-                    // Save to database
-                    const { data: authUser } = await supabase.auth.getUser();
-                    if (authUser?.user) {
-                      const { data: profile } = await supabase
-                        .from('profiles')
-                        .select('id')
-                        .eq('user_id', authUser.user.id)
-                        .single();
-
-                      if (profile) {
-                        await supabase.from('regions').insert({
-                          name: territoryName,
-                          coordinates: completedPath,
-                          area: territoryArea,
-                          owner_id: profile.id,
-                          nft_id: nftId,
-                          rent_price: Math.floor(territoryArea / 100)
-                        });
-                      }
-                    }
-                  }
-                  setShowMintModal(false);
-                } catch (error) {
-                  console.error("Failed to mint NFT:", error);
-                  toast.error("Failed to mint NFT");
-                }
-              }}
-              className="w-full"
+          
+          <div className="flex gap-3">
+            <Button
+              onClick={handleMintZone}
+              disabled={!zoneName || minting}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:opacity-50"
             >
-              <Coins className="mr-2 h-4 w-4" />
-              Mint as NFT
+              {minting ? (
+                <>Minting... ({mintProgress}%)</>
+              ) : (
+                <>
+                  <MapPin className="mr-2 h-4 w-4" />
+                  Mint Zone NFT
+                </>
+              )}
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowMintModal(false);
-                toast.info("You can mint this territory later from your profile");
-              }}
-              className="w-full"
+            <Button
+              onClick={() => setShowMintModal(false)}
+              variant="outline"
+              className="border-gray-700 text-gray-300 hover:bg-gray-800"
+              disabled={minting}
             >
-              Skip for Now
+              Cancel
             </Button>
           </div>
         </DialogContent>
