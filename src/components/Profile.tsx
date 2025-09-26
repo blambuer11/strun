@@ -246,10 +246,15 @@ export function Profile({ user, onLogout }: ProfileProps) {
                       variant="ghost"
                       className="h-6 w-6"
                       onClick={() => {
-                        navigator.clipboard.writeText(user?.address || profile?.wallet_address || '');
-                        setWalletCopied(true);
-                        toast.success("Wallet address copied!");
-                        setTimeout(() => setWalletCopied(false), 2000);
+                        const walletAddress = user?.address || profile?.wallet_address || '';
+                        if (walletAddress) {
+                          navigator.clipboard.writeText(walletAddress);
+                          setWalletCopied(true);
+                          toast.success("Wallet address copied!");
+                          setTimeout(() => setWalletCopied(false), 2000);
+                        } else {
+                          toast.error("No wallet address available");
+                        }
                       }}
                     >
                       {walletCopied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -266,7 +271,7 @@ export function Profile({ user, onLogout }: ProfileProps) {
           <Card className="p-4 bg-card/50 border-white/10 backdrop-blur-sm">
             <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
               <Users className="w-5 h-5 text-primary" />
-              Referral Code
+              Referral Program
             </h3>
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-background/50 rounded-lg">
@@ -287,6 +292,30 @@ export function Profile({ user, onLogout }: ProfileProps) {
                   {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
+              
+              {/* Referral Link */}
+              <div className="p-3 bg-background/50 rounded-lg">
+                <p className="text-sm text-muted-foreground mb-1">Share your referral link</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={`${window.location.origin}/auth?ref=${profile.referral_code}`}
+                    className="flex-1 px-3 py-2 text-xs font-mono bg-background/70 rounded border border-border"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      const referralLink = `${window.location.origin}/auth?ref=${profile.referral_code}`;
+                      navigator.clipboard.writeText(referralLink);
+                      toast.success("Referral link copied!");
+                    }}
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+              
               <div className="grid grid-cols-2 gap-3">
                 <div className="text-center p-2 bg-background/30 rounded">
                   <p className="text-2xl font-bold text-foreground">{profile.referral_count || 0}</p>
@@ -296,6 +325,11 @@ export function Profile({ user, onLogout }: ProfileProps) {
                   <p className="text-2xl font-bold text-accent">{profile.referral_xp_earned || 0}</p>
                   <p className="text-xs text-muted-foreground">XP Earned</p>
                 </div>
+              </div>
+              
+              <div className="p-2 bg-primary/10 rounded text-xs text-muted-foreground">
+                <p>🎁 Earn 500 XP for each friend who joins!</p>
+                <p>💰 New users get 100 bonus XP when using your code.</p>
               </div>
             </div>
           </Card>

@@ -190,10 +190,10 @@ export default function OpenStreetMap({
               
               // Update polyline with better styling
               if (polylineRef.current) {
-                polylineRef.current.setLatLngs(pathRef.current.map(p => [p.lat, p.lng]));
+                polylineRef.current.setLatLngs(pathRef.current.map(p => [p.lat, p.lng] as L.LatLngExpression));
               } else {
                 polylineRef.current = L.polyline(
-                  pathRef.current.map(p => [p.lat, p.lng]),
+                  pathRef.current.map(p => [p.lat, p.lng] as L.LatLngExpression),
                   { 
                     color: '#00B4D8', 
                     weight: 6, 
@@ -213,7 +213,7 @@ export default function OpenStreetMap({
               if (pathRef.current.length >= 3) {
                 // Create filled polygon like in the reference image
                 currentPolygonRef.current = L.polygon(
-                  pathRef.current.map(p => [p.lat, p.lng]),
+                  pathRef.current.map(p => [p.lat, p.lng] as L.LatLngExpression),
                   { 
                     color: '#000000', 
                     fillColor: '#00E5FF',
