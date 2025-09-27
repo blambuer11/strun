@@ -54,7 +54,10 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) {
+    
+    // Check authentication first
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       toast.error("Please login to create a group");
       return;
     }
@@ -65,7 +68,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
-        .eq("user_id", userId)
+        .eq("user_id", user.id)
         .single();
 
       if (!profile) {

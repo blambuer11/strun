@@ -65,8 +65,17 @@ export function Profile({ user, onLogout }: ProfileProps) {
       if (data) {
         setUsername(data.username || '');
         setAvatarUrl(data.avatar_url || '');
-        // Generate referral link
-        if (data.referral_code) {
+        
+        // Generate referral code if not exists
+        if (!data.referral_code) {
+          const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+          await supabase
+            .from('profiles')
+            .update({ referral_code: code })
+            .eq('id', data.id);
+          setReferralLink(`${window.location.origin}/auth?ref=${code}`);
+          setProfile({ ...data, referral_code: code });
+        } else {
           setReferralLink(`${window.location.origin}/auth?ref=${data.referral_code}`);
         }
       }
