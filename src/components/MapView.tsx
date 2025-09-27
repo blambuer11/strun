@@ -312,21 +312,26 @@ export function MapView({
     setCurrentDistance(distance);
   };
 
-  const handleTerritoryComplete = async (area: number) => {
-    setTerritoryArea(area);
+  const handleTerritoryComplete = async (territory: { path: Array<{ lat: number; lng: number }>; area: number }) => {
+    setTerritoryPath(territory.path);
+    setTerritoryArea(territory.area);
     setCanClaim(true);
-    setCompletedPath([...territoryPath]);
+    setCompletedPath(territory.path);
     
     if (detectedZone) {
       setShowMintModal(true);
     }
   };
 
-  const handleEnterExistingTerritory = async (territory: Territory) => {
+  const handleEnterExistingTerritory = async (territoryId: string) => {
     // Check if already in unauthorized list
-    if (unauthorizedEntries.has(territory.id)) {
+    if (unauthorizedEntries.has(territoryId)) {
       return; // Already penalized
     }
+    
+    // Find the territory by ID
+    const territory = territories.find(t => t.id === territoryId);
+    if (!territory) return;
     
     // Get current user
     const { data: authUser } = await supabase.auth.getUser();
@@ -344,7 +349,7 @@ export function MapView({
     const { data: region } = await supabase
       .from('regions')
       .select('owner_id')
-      .eq('id', territory.id)
+      .eq('id', territoryId)
       .single();
     
     if (region?.owner_id === profile.id) {
@@ -571,15 +576,23 @@ export function MapView({
       if (success) {
         toast.success(`Rent paid: ${rentAmount} XP`);
         
-        // Record visit
-        await supabase
+        // Record visit - get current values first then update
+        const { data: currentRegion } = await supabase
           .from('regions')
-          .update({
-            visitors: supabase.rpc('increment', { x: 1 }),
-            last_visited: new Date().toISOString(),
-            total_earnings: supabase.rpc('increment', { x: rentAmount })
-          })
-          .eq('id', rentTerritory.id);
+          .select('visitors, total_earnings')
+          .eq('id', rentTerritory.id)
+          .single();
+        
+        if (currentRegion) {
+          await supabase
+            .from('regions')
+            .update({
+              visitors: (currentRegion.visitors || 0) + 1,
+              last_visited: new Date().toISOString(),
+              total_earnings: (currentRegion.total_earnings || 0) + rentAmount
+            })
+            .eq('id', rentTerritory.id);
+        }
       } else {
         toast.error(error || "Failed to pay rent");
       }
@@ -624,7 +637,15 @@ export function MapView({
         onDistanceUpdate={handleDistanceUpdate}
         onTerritoryComplete={handleTerritoryComplete}
         onEnterExistingTerritory={handleEnterExistingTerritory}
-        existingTerritories={territories}
+        existingTerritories={territories.map(t => ({
+          id: t.id,
+          name: t.name,
+          owner_name: t.owner,
+          area: t.area,
+          path: t.path,
+          captured_at: new Date().toISOString(), // Default value for compatibility
+          is_owner: false // Default value for compatibility
+        }))}
       />
 
       {/* Stats Overlay */}
