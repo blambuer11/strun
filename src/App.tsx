@@ -8,13 +8,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
-import { Wallet as WalletIcon, Play, MapPin, User, Home as HomeIcon, Trophy, Settings, LogOut } from "lucide-react";
+import { Wallet as WalletIcon, Play, MapPin, User, Home as HomeIcon, Trophy, Settings, LogOut, Users } from "lucide-react";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated, logout, getCurrentUserAddress, getCurrentUserInfo, initService } from "@/lib/zklogin";
 import Dashboard from "./components/Dashboard";
 import { MapView } from "./components/MapView";
 import { Wallet } from "./components/Wallet";
 import { Profile } from "./components/Profile";
+import Community from "./components/Community";
 
 const queryClient = new QueryClient();
 
@@ -248,7 +249,7 @@ const App = () => {
           {/* Main Content */}
           <main className="container mx-auto px-4 py-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-4 mb-6">
+              <TabsList className="grid w-full grid-cols-5 mb-6">
                 <TabsTrigger value="dashboard" className="flex items-center gap-2">
                   <HomeIcon className="h-4 w-4" />
                   <span className="hidden sm:inline">Dashboard</span>
@@ -260,6 +261,10 @@ const App = () => {
                 <TabsTrigger value="wallet" className="flex items-center gap-2">
                   <WalletIcon className="h-4 w-4" />
                   <span className="hidden sm:inline">Wallet</span>
+                </TabsTrigger>
+                <TabsTrigger value="community" className="flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  <span className="hidden sm:inline">Community</span>
                 </TabsTrigger>
                 <TabsTrigger value="profile" className="flex items-center gap-2">
                   <User className="h-4 w-4" />
@@ -299,6 +304,10 @@ const App = () => {
                 )}
               </TabsContent>
 
+              <TabsContent value="community">
+                <Community />
+              </TabsContent>
+
               <TabsContent value="profile">
                 <Profile user={getCurrentUserInfo()} onLogout={handleLogout} />
               </TabsContent>
@@ -307,7 +316,7 @@ const App = () => {
 
           {/* Bottom Navigation for Mobile */}
           <div className="fixed bottom-0 left-0 right-0 bg-card border-t md:hidden">
-            <div className="grid grid-cols-4 p-2">
+            <div className="grid grid-cols-5 p-2">
               <Button
                 variant={activeTab === "dashboard" ? "default" : "ghost"}
                 size="sm"
@@ -334,6 +343,15 @@ const App = () => {
               >
                 <WalletIcon className="h-5 w-5" />
                 <span className="text-xs">Wallet</span>
+              </Button>
+              <Button
+                variant={activeTab === "community" ? "default" : "ghost"}
+                size="sm"
+                onClick={() => setActiveTab("community")}
+                className="flex flex-col items-center gap-1 h-auto py-2"
+              >
+                <Users className="h-5 w-5" />
+                <span className="text-xs">Feed</span>
               </Button>
               <Button
                 variant={activeTab === "profile" ? "default" : "ghost"}

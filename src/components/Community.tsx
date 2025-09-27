@@ -82,58 +82,87 @@ export default function Community() {
 
   const loadPosts = async () => {
     try {
-      const { data: postsData, error } = await supabase
+      // First get posts
+      const { data: postsData, error: postsError } = await supabase
         .from('community_posts')
-        .select(`
-          *,
-          profiles!community_posts_user_id_fkey (
-            username,
-            avatar_url
-          ),
-          post_likes (
-            user_id
-          ),
-          post_comments (
-            *,
-            profiles!post_comments_user_id_fkey (
-              username,
-              avatar_url
-            )
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (postsError) throw postsError;
+
+      if (!postsData) {
+        setPosts([]);
+        return;
+      }
+
+      // Get user profiles
+      const userIds = [...new Set(postsData.map(p => p.user_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', userIds);
+
+      // Get likes
+      const postIds = postsData.map(p => p.id);
+      const { data: likes } = await supabase
+        .from('post_likes')
+        .select('post_id, user_id')
+        .in('post_id', postIds);
+
+      // Get comments
+      const { data: comments } = await supabase
+        .from('post_comments')
+        .select('*')
+        .in('post_id', postIds)
+        .order('created_at', { ascending: true });
+
+      // Get comment user profiles
+      const commentUserIds = [...new Set(comments?.map(c => c.user_id) || [])];
+      const { data: commentProfiles } = await supabase
+        .from('profiles')
+        .select('id, username, avatar_url')
+        .in('id', commentUserIds);
 
       const { data: { user } } = await supabase.auth.getUser();
       const userProfile = user ? await getUserProfile(user.id) : null;
 
-      const formattedPosts = postsData?.map(post => ({
-        id: post.id,
-        user_id: post.user_id,
-        username: post.profiles?.username || 'Anonymous',
-        avatar_url: post.profiles?.avatar_url,
-        content: post.content,
-        image_url: post.image_url,
-        location: post.location,
-        likes: post.likes_count || 0,
-        reposts: post.reposts_count || 0,
-        comments: post.post_comments?.map((c: any) => ({
-          id: c.id,
-          user_id: c.user_id,
-          username: c.profiles?.username || 'Anonymous',
-          avatar_url: c.profiles?.avatar_url,
-          content: c.content,
-          created_at: c.created_at
-        })) || [],
-        created_at: post.created_at,
-        has_liked: post.post_likes?.some((l: any) => l.user_id === userProfile?.id),
-        has_reposted: false // Implement if needed
-      })) || [];
+      // Format posts with all related data
+      const formattedPosts = postsData.map(post => {
+        const profile = profiles?.find(p => p.id === post.user_id);
+        const postLikes = likes?.filter(l => l.post_id === post.id) || [];
+        const postComments = comments?.filter(c => c.post_id === post.id) || [];
+
+        return {
+          id: post.id,
+          user_id: post.user_id,
+          username: profile?.username || 'Anonymous',
+          avatar_url: profile?.avatar_url,
+          content: post.content,
+          image_url: post.image_url,
+          location: post.location,
+          likes: post.likes_count || 0,
+          reposts: post.reposts_count || 0,
+          comments: postComments.map(c => {
+            const commentProfile = commentProfiles?.find(p => p.id === c.user_id);
+            return {
+              id: c.id,
+              user_id: c.user_id,
+              username: commentProfile?.username || 'Anonymous',
+              avatar_url: commentProfile?.avatar_url,
+              content: c.content,
+              created_at: c.created_at
+            };
+          }),
+          created_at: post.created_at,
+          has_liked: postLikes.some(l => l.user_id === userProfile?.id),
+          has_reposted: false
+        };
+      });
 
       setPosts(formattedPosts);
     } catch (error) {
       console.error('Error loading posts:', error);
+      toast.error("Failed to load posts");
     }
   };
 
