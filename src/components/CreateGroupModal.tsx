@@ -55,25 +55,49 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check authentication first
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("Please login to create a group");
-      return;
+    // Check for zkLogin authentication first
+    const zkLoginAddress = localStorage.getItem("strun_sui_address");
+    const zkLoginToken = localStorage.getItem("strun_id_token");
+    
+    let profileId: string | null = null;
+    
+    if (zkLoginAddress && zkLoginToken) {
+      // Get or create profile for zkLogin user
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('wallet_address', zkLoginAddress)
+        .single();
+      
+      if (profile) {
+        profileId = profile.id;
+      }
     }
-
-    setLoading(true);
-    try {
-      // Get user profile ID
+    
+    // Fallback to Supabase auth
+    if (!profileId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login to create a group");
+        return;
+      }
+      
       const { data: profile } = await supabase
         .from("profiles")
         .select("id")
         .eq("user_id", user.id)
         .single();
-
+        
       if (!profile) {
-        throw new Error("Profile not found");
+        toast.error("Profile not found");
+        return;
       }
+      
+      profileId = profile.id;
+    }
+
+    setLoading(true);
+    try {
 
       // Generate join code
       const joinCode = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -101,7 +125,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
           running_area: formData.runningArea,
           max_members: formData.maxMembers,
           weekly_goal: formData.weeklyGoal * 1000, // Convert to meters
-          creator_id: profile.id,
+          creator_id: profileId,
           join_code: joinCode,
           is_public: true
         })
@@ -115,7 +139,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
         .from("group_members")
         .insert({
           group_id: group.id,
-          user_id: profile.id,
+          user_id: profileId,
           role: "admin"
         });
 

@@ -188,10 +188,42 @@ export default function Community() {
   };
 
   const handlePost = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error("Please login to post");
-      return;
+    // Check for zkLogin authentication first
+    const zkLoginAddress = localStorage.getItem("strun_sui_address");
+    const zkLoginToken = localStorage.getItem("strun_id_token");
+    
+    let profileId: string | null = null;
+    let authUserId: string | null = null;
+    
+    if (zkLoginAddress && zkLoginToken) {
+      // Get profile for zkLogin user
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, user_id')
+        .eq('wallet_address', zkLoginAddress)
+        .single();
+      
+      if (profile) {
+        profileId = profile.id;
+        authUserId = profile.user_id || zkLoginAddress;
+      }
+    }
+    
+    // Fallback to Supabase auth
+    if (!profileId) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Please login to post");
+        return;
+      }
+      
+      authUserId = user.id;
+      const profile = await getUserProfile(user.id);
+      if (!profile) {
+        toast.error("Profile not found");
+        return;
+      }
+      profileId = profile.id;
     }
 
     if (!newPost.trim() && !selectedImage) {
@@ -201,13 +233,11 @@ export default function Community() {
 
     setLoading(true);
     try {
-      const profile = await getUserProfile(user.id);
-      if (!profile) throw new Error("Profile not found");
 
       let imageUrl = null;
       if (selectedImage) {
         const fileExt = selectedImage.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
+        const fileName = `${authUserId}/${Date.now()}.${fileExt}`;
         
         const { error: uploadError, data } = await supabase.storage
           .from('community')
@@ -225,7 +255,7 @@ export default function Community() {
       const { error } = await supabase
         .from('community_posts')
         .insert({
-          user_id: profile.id,
+          user_id: profileId,
           content: newPost,
           image_url: imageUrl,
           location: null, // Implement location if needed
