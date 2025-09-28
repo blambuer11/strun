@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Square, Battery, Radio, Navigation, MapPin, TrendingUp, Map, AlertTriangle, Coins, Shield, Zap } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { GoogleMapView } from "./GoogleMapView";
+import { MapLibreView } from "./MapLibreView";
 import { toast } from "sonner";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { getCurrentUserInfo } from "@/lib/zklogin";
@@ -284,14 +284,17 @@ export function MapView({
     }
   };
 
-  const handlePathUpdate = (path: Array<{ lat: number; lng: number }>) => {
-    setTerritoryPath(path);
+  const handlePathUpdate = (path: [number, number][]) => {
+    // Convert LatLng format to { lat, lng } format
+    const convertedPath = path.map(p => ({ lat: p[0], lng: p[1] }));
+    setTerritoryPath(convertedPath);
     
     // Update run trace
-    if (isRunning && runTrace) {
+    if (isRunning && runTrace && path.length > 0) {
+      const lastPoint = path[path.length - 1];
       const newPoint = {
-        lat: path[path.length - 1].lat,
-        lng: path[path.length - 1].lng,
+        lat: lastPoint[0],
+        lng: lastPoint[1],
         timestamp: Date.now(),
         accuracy: 10, // Default accuracy
         speed: runningStats.pace
@@ -312,11 +315,13 @@ export function MapView({
     setCurrentDistance(distance);
   };
 
-  const handleTerritoryComplete = async (territory: { path: Array<{ lat: number; lng: number }>; area: number }) => {
-    setTerritoryPath(territory.path);
+  const handleTerritoryComplete = async (territory: { path: [number, number][]; area: number }) => {
+    // Convert LatLng format to { lat, lng } format
+    const convertedPath = territory.path.map(p => ({ lat: p[0], lng: p[1] }));
+    setTerritoryPath(convertedPath);
     setTerritoryArea(territory.area);
     setCanClaim(true);
-    setCompletedPath(territory.path);
+    setCompletedPath(convertedPath);
     
     if (detectedZone) {
       setShowMintModal(true);
@@ -631,7 +636,7 @@ export function MapView({
       </div>
 
       {/* Map */}
-      <GoogleMapView
+      <MapLibreView
         isRunning={isRunning}
         onPathUpdate={handlePathUpdate}
         onDistanceUpdate={handleDistanceUpdate}
@@ -640,11 +645,12 @@ export function MapView({
         existingTerritories={territories.map(t => ({
           id: t.id,
           name: t.name,
-          owner_name: t.owner,
-          area: t.area,
-          path: t.path,
-          captured_at: new Date().toISOString(), // Default value for compatibility
-          is_owner: false // Default value for compatibility
+          coordinates: {
+            type: "Polygon",
+            coordinates: [t.path.map(p => [p.lng, p.lat])]
+          },
+          owner_id: t.owner,
+          rent_price: t.rentPrice || 5
         }))}
       />
 

@@ -55,26 +55,48 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check for zkLogin authentication first
+    // First check zkLogin authentication
     const zkLoginAddress = localStorage.getItem("strun_sui_address");
     const zkLoginToken = localStorage.getItem("strun_id_token");
     
     let profileId: string | null = null;
     
+    // If zkLogin user, find or create profile
     if (zkLoginAddress && zkLoginToken) {
-      // Get or create profile for zkLogin user
-      const { data: profile } = await supabase
+      // Try to find existing profile
+      let { data: profile } = await supabase
         .from('profiles')
         .select('id')
         .eq('wallet_address', zkLoginAddress)
         .single();
+      
+      // If no profile exists, create one for zkLogin user
+      if (!profile) {
+        const { data: newProfile, error } = await supabase
+          .from('profiles')
+          .insert({
+            wallet_address: zkLoginAddress,
+            username: zkLoginAddress.slice(0, 8),
+            email: `${zkLoginAddress}@zklogin.local`,
+            user_id: zkLoginAddress, // Use wallet address as user_id for zkLogin users
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error("Error creating profile:", error);
+          toast.error("Failed to create profile");
+          return;
+        }
+        profile = newProfile;
+      }
       
       if (profile) {
         profileId = profile.id;
       }
     }
     
-    // Fallback to Supabase auth
+    // Fallback to Supabase auth if not zkLogin
     if (!profileId) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
