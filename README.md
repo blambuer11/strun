@@ -1,73 +1,107 @@
-# Welcome to your Lovable project
+🗺️ Strun – Running & Map NFT Platform
 
-## Project info
+Strun is a Web3 platform where users can track their running routes in real-time on the map, calculate the covered areas, mint them as NFTs, and trade or rent those areas.
+The project integrates zkLogin (Google OAuth) authentication, Sui blockchain NFT minting, MapTiler / MapLibre GL for maps, Walrus decentralized storage, and social running group features.
 
-**URL**: https://lovable.dev/projects/8e42f826-5e18-40c4-bf99-45b222b02529
+🚀 Features
 
-## How can I edit this code?
+🔑 zkLogin Authentication: Sign in securely with your Google account.
 
-There are several ways of editing your application.
+🗺️ Live Run Tracking: Your running route is drawn live on the map.
 
-**Use Lovable**
+📍 Area Calculation: At the end of the run, the covered area is automatically calculated.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/8e42f826-5e18-40c4-bf99-45b222b02529) and start prompting.
+🎨 NFT Minting: The calculated area is minted as an NFT and cannot be minted again.
 
-Changes made via Lovable will be committed automatically to this repo.
+🗂️ Walrus Storage: Store run metadata, route data, and user-generated content permanently and verifiably on decentralized storage.
 
-**Use your preferred IDE**
+👥 Group Runs: Create group run points and join others on the map.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+🏷️ Area Ownership: Owners’ usernames and profile pictures are displayed on their areas.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+🔄 Trading & Renting: Trade or rent your NFT-owned areas with other users.
 
-Follow these steps:
+🛠️ Tech Stack
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+Frontend: React + TypeScript
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+Maps: MapTiler
+ + MapLibre GL JS
 
-# Step 3: Install the necessary dependencies.
-npm i
+Blockchain: Sui Move
+ Smart Contracts
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Auth: zkLogin
+ (Google OAuth)
+
+Storage: Walrus
+ decentralized data layer
+
+Backend: Node.js + Express (API & DB)
+
+Database: PostgreSQL / Supabase
+
+⚡ Installation
+1. Clone the repo
+git clone https://github.com/username/strun.git
+cd strun
+
+2. Install dependencies
+npm install
+
+3. Environment variables
+
+Create a .env file in the root:
+
+VITE_MAPTILER_KEY=your_maptiler_api_key
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+VITE_SUI_NETWORK=testnet
+VITE_WALRUS_NODE=https://node.walrus.site
+
+4. Run development server
 npm run dev
-```
 
-**Edit a file directly in GitHub**
+5. Deploy Sui smart contracts
+cd sui-contracts/map_land
+sui move build
+sui client publish --gas-budget 200000000
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+6. Store data on Walrus
 
-**Use GitHub Codespaces**
+Example (upload run metadata JSON):
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+curl -X POST https://node.walrus.site/store \
+  -H "Content-Type: application/json" \
+  -d '{"route":"geojson_data","owner":"0xUSER","timestamp":1234567890}'
 
-## What technologies are used for this project?
+📌 Usage
 
-This project is built with:
+Login with Google (zkLogin).
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Start running — your live route will appear on the map.
 
-## How can I deploy this project?
+When you finish, the covered area is calculated.
 
-Simply open [Lovable](https://lovable.dev/projects/8e42f826-5e18-40c4-bf99-45b222b02529) and click on Share -> Publish.
+Mint the area as an NFT (cannot be duplicated).
 
-## Can I connect a custom domain to my Lovable project?
+Store the run’s metadata & map data permanently on Walrus.
 
-Yes, you can!
+View owned areas in your profile and trade/rent them.
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Join group runs and view other participants’ areas on the map.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+👨‍💻 Contributing
+
+Fork this repo 🍴
+
+Create a new branch (feature/new-feature)
+
+Commit your changes
+
+Open a pull request
+
+📄 License
+
+This project is licensed under the MIT License.
+
+💡 Note: You need SUI tokens in your wallet to deploy on mainnet. For testing, you can use the official Sui testnet faucet.
