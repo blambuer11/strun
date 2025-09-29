@@ -86,10 +86,11 @@ export const MapLibreView: React.FC<MapLibreViewProps> = ({
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize MapLibre map with demo tiles
+    // Initialize MapLibre map with MapTiler
+    const MAPTILER_KEY = "JNY9zsA8c4duUO7cPboB";
     mapRef.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: "https://demotiles.maplibre.org/style.json", // Using demo tiles (free)
+      style: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
       center: [29.06, 41.0], // Istanbul default
       zoom: 14,
       pitch: 0,
