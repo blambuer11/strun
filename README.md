@@ -43,7 +43,7 @@ Database: PostgreSQL / Supabase
 
 ⚡ Installation
 1. Clone the repo
-git clone https://github.com/username/strun.git
+git clone https://github.com/blambuer11/strun.git
 cd strun
 
 2. Install dependencies
