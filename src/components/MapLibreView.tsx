@@ -86,10 +86,10 @@ export const MapLibreView: React.FC<MapLibreViewProps> = ({
   useEffect(() => {
     if (!mapContainer.current) return;
 
-    // Initialize MapLibre map
+    // Initialize MapLibre map with demo tiles
     mapRef.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: "https://api.maptiler.com/maps/streets-v2/style.json?key=get_your_own_key", // Use demo tiles or get MapTiler key
+      style: "https://demotiles.maplibre.org/style.json", // Using demo tiles (free)
       center: [29.06, 41.0], // Istanbul default
       zoom: 14,
       pitch: 0,
@@ -375,8 +375,8 @@ export const MapLibreView: React.FC<MapLibreViewProps> = ({
   }, [onTerritoryComplete]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={mapContainer} className="absolute inset-0" />
+    <div className="relative w-full h-full" style={{ minHeight: '100vh' }}>
+      <div ref={mapContainer} className="absolute inset-0" style={{ width: '100%', height: '100%' }} />
       
       {/* Map controls overlay */}
       <div className="absolute top-4 right-4 bg-background/90 backdrop-blur-sm rounded-lg p-2 shadow-lg">

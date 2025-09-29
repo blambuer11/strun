@@ -72,13 +72,14 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
       
       // If no profile exists, create one for zkLogin user
       if (!profile) {
+        const userIdForProfile = crypto.randomUUID();
         const { data: newProfile, error } = await supabase
           .from('profiles')
           .insert({
             wallet_address: zkLoginAddress,
             username: zkLoginAddress.slice(0, 8),
             email: `${zkLoginAddress}@zklogin.local`,
-            user_id: zkLoginAddress, // Use wallet address as user_id for zkLogin users
+            user_id: userIdForProfile, // Use unique UUID for zkLogin users
           })
           .select()
           .single();

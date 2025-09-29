@@ -16,6 +16,7 @@ import { MapView } from "./components/MapView";
 import { Wallet } from "./components/Wallet";
 import { Profile } from "./components/Profile";
 import Community from "./components/Community";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 const queryClient = new QueryClient();
 
