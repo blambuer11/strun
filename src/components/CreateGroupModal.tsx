@@ -9,6 +9,7 @@ import { MapPin, Trophy, Users, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getCurrentUserInfo } from "@/lib/zklogin";
+import { upsertUser } from "@/services/userService";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -56,51 +57,20 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // First check zkLogin authentication
+    // Check zkLogin authentication
     const zkLoginAddress = localStorage.getItem("strun_sui_address");
     const zkLoginToken = localStorage.getItem("strun_id_token");
     const userInfo = getCurrentUserInfo();
     
-    let userId: string | null = null;
-    
-    // If zkLogin user, find or create user
-    if (zkLoginAddress && zkLoginToken && userInfo) {
-      // Try to find existing user
-      let { data: user } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', userInfo.email)
-        .single();
-      
-      // If no user exists, create one for zkLogin user
-      if (!user) {
-        const { data: newUser, error } = await supabase
-          .from('users')
-          .insert({
-            email: userInfo.email,
-            name: userInfo.name || userInfo.email.split('@')[0],
-            wallet: zkLoginAddress,
-            avatar_url: userInfo.picture
-          })
-          .select()
-          .single();
-          
-        if (error) {
-          console.error("Error creating user:", error);
-          toast.error("Failed to create user");
-          return;
-        }
-        user = newUser;
-      }
-      
-      if (user) {
-        userId = user.id;
-      }
-    }
-    
-    // Fallback to Supabase auth if not zkLogin
-    if (!userId) {
+    if (!zkLoginAddress || !zkLoginToken || !userInfo) {
       toast.error("Please login to create a group");
+      return;
+    }
+
+    // Ensure user exists in database
+    const user = await upsertUser();
+    if (!user) {
+      toast.error("Failed to create user profile");
       return;
     }
 
@@ -133,7 +103,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
             lng: parseFloat(formData.longitude) || 28.9784 
           },
           max_members: formData.maxMembers,
-          created_by: userId,
+          created_by: user.id,
           is_public: true
         })
         .select()
@@ -146,7 +116,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
         .from("group_members")
         .insert({
           group_id: group.id,
-          user_id: userId,
+          user_id: user.id,
           role: "admin"
         });
 

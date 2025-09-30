@@ -19,6 +19,8 @@ import {
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { getCurrentUserInfo } from "@/lib/zklogin";
+import { upsertUser } from "@/services/userService";
 
 interface Post {
   id: string;
@@ -188,64 +190,14 @@ export default function Community() {
   };
 
   const handlePost = async () => {
-    // First check zkLogin authentication 
+    // Check zkLogin authentication 
     const zkLoginAddress = localStorage.getItem("strun_sui_address");
     const zkLoginToken = localStorage.getItem("strun_id_token");
+    const userInfo = getCurrentUserInfo();
     
-    let profileId: string | null = null;
-    let authUserId: string | null = null;
-    
-    // If zkLogin user, find or create profile
-    if (zkLoginAddress && zkLoginToken) {
-      // Try to find existing profile
-      let { data: profile } = await supabase
-        .from('profiles')
-        .select('id, user_id')
-        .eq('wallet_address', zkLoginAddress)
-        .single();
-      
-      // If no profile exists, create one for zkLogin user
-      if (!profile) {
-        const { data: newProfile, error } = await supabase
-          .from('profiles')
-          .insert({
-            wallet_address: zkLoginAddress,
-            username: zkLoginAddress.slice(0, 8),
-            email: `${zkLoginAddress}@zklogin.local`,
-            user_id: zkLoginAddress, // Use wallet address as user_id for zkLogin users
-          })
-          .select()
-          .single();
-          
-        if (error) {
-          console.error("Error creating profile:", error);
-          toast.error("Failed to create profile");
-          return;
-        }
-        profile = newProfile;
-      }
-      
-      if (profile) {
-        profileId = profile.id;
-        authUserId = profile.user_id || zkLoginAddress;
-      }
-    }
-    
-    // Fallback to Supabase auth if not zkLogin
-    if (!profileId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please login to post");
-        return;
-      }
-      
-      authUserId = user.id;
-      const profile = await getUserProfile(user.id);
-      if (!profile) {
-        toast.error("Profile not found");
-        return;
-      }
-      profileId = profile.id;
+    if (!zkLoginAddress || !zkLoginToken || !userInfo) {
+      toast.error("Please login first");
+      return;
     }
 
     if (!newPost.trim() && !selectedImage) {
@@ -255,11 +207,17 @@ export default function Community() {
 
     setLoading(true);
     try {
+      // Ensure user exists in database
+      const user = await upsertUser();
+      if (!user) {
+        toast.error("Failed to create user profile");
+        return;
+      }
 
       let imageUrl = null;
       if (selectedImage) {
         const fileExt = selectedImage.name.split('.').pop();
-        const fileName = `${authUserId}/${Date.now()}.${fileExt}`;
+        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
         
         const { error: uploadError, data } = await supabase.storage
           .from('community')
@@ -275,14 +233,11 @@ export default function Community() {
       }
 
       const { error } = await supabase
-        .from('community_posts')
+        .from('posts')
         .insert({
-          user_id: profileId,
+          user_id: user.id,
           content: newPost,
-          image_url: imageUrl,
-          location: null, // Implement location if needed
-          likes_count: 0,
-          reposts_count: 0
+          image_url: imageUrl
         });
 
       if (error) throw error;
