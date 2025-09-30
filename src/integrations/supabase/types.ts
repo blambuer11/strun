@@ -122,6 +122,13 @@ export type Database = {
             foreignKeyName: "community_posts_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -165,6 +172,13 @@ export type Database = {
             columns: ["competition_id"]
             isOneToOne: false
             referencedRelation: "competitions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "competition_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
             referencedColumns: ["id"]
           },
           {
@@ -361,6 +375,13 @@ export type Database = {
             foreignKeyName: "leaderboard_entries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leaderboard_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -404,6 +425,13 @@ export type Database = {
             columns: ["lobby_id"]
             isOneToOne: false
             referencedRelation: "private_lobbies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lobby_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
             referencedColumns: ["id"]
           },
           {
@@ -456,6 +484,13 @@ export type Database = {
             foreignKeyName: "post_comments_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -493,6 +528,13 @@ export type Database = {
             columns: ["post_id"]
             isOneToOne: false
             referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "post_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
             referencedColumns: ["id"]
           },
           {
@@ -611,6 +653,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "private_lobbies_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "private_lobbies_creator_id_fkey"
             columns: ["creator_id"]
@@ -756,6 +805,13 @@ export type Database = {
             foreignKeyName: "regions_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "regions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -870,6 +926,13 @@ export type Database = {
             foreignKeyName: "transactions_from_user_id_fkey"
             columns: ["from_user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_from_user_id_fkey"
+            columns: ["from_user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -885,6 +948,13 @@ export type Database = {
             columns: ["region_id"]
             isOneToOne: false
             referencedRelation: "regions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transactions_to_user_id_fkey"
+            columns: ["to_user_id"]
+            isOneToOne: false
+            referencedRelation: "leaderboard_stats"
             referencedColumns: ["id"]
           },
           {
@@ -946,6 +1016,13 @@ export type Database = {
             foreignKeyName: "user_challenges_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_challenges_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -999,6 +1076,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_settings_user_id_fkey"
             columns: ["user_id"]
@@ -1077,6 +1161,21 @@ export type Database = {
       }
     }
     Views: {
+      leaderboard_stats: {
+        Row: {
+          avatar_url: string | null
+          country: string | null
+          country_rank: number | null
+          global_rank: number | null
+          id: string | null
+          level: number | null
+          total_distance: number | null
+          total_runs: number | null
+          username: string | null
+          xp: number | null
+        }
+        Relationships: []
+      }
       public_profiles: {
         Row: {
           avatar_url: string | null
@@ -1093,9 +1192,9 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
-          country?: string | null
-          country_code?: string | null
-          created_at?: string | null
+          country?: never
+          country_code?: never
+          created_at?: never
           id?: string | null
           level?: number | null
           total_area?: number | null
@@ -1106,9 +1205,9 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
-          country?: string | null
-          country_code?: string | null
-          created_at?: string | null
+          country?: never
+          country_code?: never
+          created_at?: never
           id?: string | null
           level?: number | null
           total_area?: number | null
@@ -1167,6 +1266,10 @@ export type Database = {
       }
       is_lobby_participant: {
         Args: { lobby_uuid: string }
+        Returns: boolean
+      }
+      is_profile_public: {
+        Args: { profile_user_id: string }
         Returns: boolean
       }
       update_leaderboard_entry: {
