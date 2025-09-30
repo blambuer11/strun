@@ -12,7 +12,6 @@ import { Wallet as WalletIcon, Play, MapPin, User, Home as HomeIcon, Trophy, Set
 import strunLogo from "@/assets/strun-logo-new.png";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated, logout, getCurrentUserAddress, getCurrentUserInfo, initService } from "@/lib/zklogin";
 import { supabase } from "@/integrations/supabase/client";
-import { autoHandleCallback } from "@/auth/autoHandleCallback";
 import Dashboard from "./components/Dashboard";
 import { MapView } from "./components/MapView";
 import { Wallet } from "./components/Wallet";
@@ -38,20 +37,59 @@ const App = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        // Use the new autoHandleCallback function for robust auth handling
-        const authUser = await autoHandleCallback((user) => {
-          localStorage.setItem('strun_user', JSON.stringify(user));
-        });
+        // 1) If URL has id_token (OAuth redirect), extract and store
+        const paramsHash = window.location.hash || window.location.search;
+        let idToken = null;
         
-        if (authUser) {
-          setIsLoggedIn(true);
-          toast.success("Successfully logged in!");
+        if (paramsHash.includes('id_token=')) {
+          const params = new URLSearchParams(paramsHash.replace('#','').replace('?',''));
+          idToken = params.get('id_token');
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
         } else {
-          // Check if already authenticated from localStorage
-          const storedUser = localStorage.getItem("strun_user");
-          const storedToken = localStorage.getItem("strun_id_token");
+          // Check if token saved in localStorage
+          idToken = localStorage.getItem('strun_id_token');
+        }
+
+        if (idToken) {
+          // Store token locally
+          localStorage.setItem('strun_id_token', idToken);
+          localStorage.setItem('strun_login_state', 'authenticated');
           
-          if (storedUser && storedToken) {
+          // Handle zkLogin callback to get address
+          const address = await handleOAuthCallback();
+          if (address) {
+            // Get user info
+            const userInfo = getCurrentUserInfo();
+            if (userInfo) {
+              localStorage.setItem('strun_user', JSON.stringify(userInfo));
+              
+              // Upsert user to our database
+              const { data: user, error } = await supabase
+                .from('users')
+                .upsert({
+                  email: userInfo.email,
+                  name: userInfo.name,
+                  avatar_url: userInfo.picture,
+                  wallet: address
+                }, { onConflict: 'email' })
+                .select()
+                .single();
+              
+              if (!error && user) {
+                setIsLoggedIn(true);
+                toast.success("Successfully logged in!");
+              }
+            }
+          } else {
+            // If callback failed, remove saved token
+            localStorage.removeItem('strun_id_token');
+            localStorage.setItem('strun_login_state', 'idle');
+          }
+        } else {
+          // Check if already authenticated
+          const authenticated = isAuthenticated();
+          if (authenticated) {
             setIsLoggedIn(true);
           } else {
             // Initialize service for new login
