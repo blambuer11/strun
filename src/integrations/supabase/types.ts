@@ -544,6 +544,13 @@ export type Database = {
             foreignKeyName: "posts_run_id_fkey"
             columns: ["run_id"]
             isOneToOne: false
+            referencedRelation: "public_run_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
             referencedRelation: "runs"
             referencedColumns: ["id"]
           },
@@ -1112,6 +1119,19 @@ export type Database = {
         }
         Relationships: []
       }
+      public_run_stats: {
+        Row: {
+          area: number | null
+          avatar_url: string | null
+          created_at: string | null
+          distance: number | null
+          duration: number | null
+          id: string | null
+          user_name: string | null
+          xp_earned: number | null
+        }
+        Relationships: []
+      }
       public_users: {
         Row: {
           avatar_url: string | null
@@ -1144,6 +1164,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      is_lobby_participant: {
+        Args: { lobby_uuid: string }
+        Returns: boolean
       }
       update_leaderboard_entry: {
         Args: {
