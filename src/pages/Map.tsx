@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { MapView } from "@/components/MapView";
 import { toast } from "sonner";
 import { isAuthenticated } from "@/lib/zklogin";
+import { upsertUser, getCurrentUser } from "@/services/userService";
+import { saveRun, RunData } from "@/services/runService";
 
 const Map = () => {
   const navigate = useNavigate();

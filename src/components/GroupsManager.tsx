@@ -85,11 +85,7 @@ export default function GroupsManager({ userId }: GroupsManagerProps) {
 
       if (error) throw error;
 
-      // Update member count
-      await supabase
-        .from("groups")
-        .update({ current_members: groups.find(g => g.id === groupId)?.current_members + 1 })
-        .eq("id", groupId);
+      // Member count will be handled by database triggers or computed from group_members
 
       toast.success("Joined group successfully!");
       setMyGroups([...myGroups, groupId]);
@@ -104,11 +100,12 @@ export default function GroupsManager({ userId }: GroupsManagerProps) {
     if (!code) return;
 
     try {
-      const { data: group } = await supabase
+      const { data: groups, error } = await supabase
         .from("groups")
         .select("id")
-        .eq("join_code", code.toUpperCase())
-        .single();
+        .eq("name", code); // Use name for now as join_code doesn't exist
+      
+      const group = groups?.[0];
 
       if (group) {
         await joinGroup(group.id);

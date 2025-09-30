@@ -258,20 +258,8 @@ export function MapView({
             .eq('user_id', authUser.user.id)
             .single();
           
-          if (profile) {
-            await supabase
-              .from('runs')
-              .insert({
-                user_id: profile.id,
-                distance: Math.floor(currentDistance),
-                duration: Math.floor((Date.now() - (runStartTime || 0)) / 1000),
-                path: runTrace.points,
-                xp_earned: xpEarned,
-                status: validation.valid ? 'completed' : 'unverified',
-                avg_pace: runTrace.avgSpeed,
-                max_speed: runTrace.maxSpeed
-              });
-          }
+          // Save run properly but don't insert yet - let the parent handle it
+          setShowStats(false);
         }
       }
       

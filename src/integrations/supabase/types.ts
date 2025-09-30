@@ -224,31 +224,25 @@ export type Database = {
       }
       group_members: {
         Row: {
-          group_id: string
+          group_id: string | null
           id: string
           joined_at: string | null
           role: string | null
-          total_contribution: number | null
-          user_id: string
-          weekly_distance: number | null
+          user_id: string | null
         }
         Insert: {
-          group_id: string
+          group_id?: string | null
           id?: string
           joined_at?: string | null
           role?: string | null
-          total_contribution?: number | null
-          user_id: string
-          weekly_distance?: number | null
+          user_id?: string | null
         }
         Update: {
-          group_id?: string
+          group_id?: string | null
           id?: string
           joined_at?: string | null
           role?: string | null
-          total_contribution?: number | null
-          user_id?: string
-          weekly_distance?: number | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -258,64 +252,58 @@ export type Database = {
             referencedRelation: "groups"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "group_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       groups: {
         Row: {
           avatar_url: string | null
-          city: string
-          country: string
           created_at: string | null
-          creator_id: string
-          current_members: number | null
+          created_by: string | null
           description: string | null
           id: string
           is_public: boolean | null
-          join_code: string | null
+          location: Json | null
           max_members: number | null
           name: string
-          running_area: string | null
-          total_distance: number | null
-          updated_at: string | null
-          weekly_goal: number | null
         }
         Insert: {
           avatar_url?: string | null
-          city: string
-          country: string
           created_at?: string | null
-          creator_id: string
-          current_members?: number | null
+          created_by?: string | null
           description?: string | null
           id?: string
           is_public?: boolean | null
-          join_code?: string | null
+          location?: Json | null
           max_members?: number | null
           name: string
-          running_area?: string | null
-          total_distance?: number | null
-          updated_at?: string | null
-          weekly_goal?: number | null
         }
         Update: {
           avatar_url?: string | null
-          city?: string
-          country?: string
           created_at?: string | null
-          creator_id?: string
-          current_members?: number | null
+          created_by?: string | null
           description?: string | null
           id?: string
           is_public?: boolean | null
-          join_code?: string | null
+          location?: Json | null
           max_members?: number | null
           name?: string
-          running_area?: string | null
-          total_distance?: number | null
-          updated_at?: string | null
-          weekly_goal?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "groups_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       leaderboard_entries: {
         Row: {
@@ -505,6 +493,51 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      posts: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          image_url: string | null
+          likes_count: number | null
+          run_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          likes_count?: number | null
+          run_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          image_url?: string | null
+          likes_count?: number | null
+          run_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "posts_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -709,57 +742,45 @@ export type Database = {
       }
       runs: {
         Row: {
+          area: number | null
           avg_pace: number | null
           calories_burned: number | null
-          captured_area: Json | null
           created_at: string | null
           distance: number | null
           duration: number | null
-          end_time: string | null
           id: string
-          max_speed: number | null
-          path: Json
-          start_time: string | null
-          status: string | null
-          updated_at: string | null
+          nft_metadata: Json | null
+          nft_minted: boolean | null
+          route: Json
           user_id: string | null
-          weather: Json | null
           xp_earned: number | null
         }
         Insert: {
+          area?: number | null
           avg_pace?: number | null
           calories_burned?: number | null
-          captured_area?: Json | null
           created_at?: string | null
           distance?: number | null
           duration?: number | null
-          end_time?: string | null
           id?: string
-          max_speed?: number | null
-          path: Json
-          start_time?: string | null
-          status?: string | null
-          updated_at?: string | null
+          nft_metadata?: Json | null
+          nft_minted?: boolean | null
+          route: Json
           user_id?: string | null
-          weather?: Json | null
           xp_earned?: number | null
         }
         Update: {
+          area?: number | null
           avg_pace?: number | null
           calories_burned?: number | null
-          captured_area?: Json | null
           created_at?: string | null
           distance?: number | null
           duration?: number | null
-          end_time?: string | null
           id?: string
-          max_speed?: number | null
-          path?: Json
-          start_time?: string | null
-          status?: string | null
-          updated_at?: string | null
+          nft_metadata?: Json | null
+          nft_minted?: boolean | null
+          route?: Json
           user_id?: string | null
-          weather?: Json | null
           xp_earned?: number | null
         }
         Relationships: [
@@ -767,14 +788,7 @@ export type Database = {
             foreignKeyName: "runs_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "runs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profiles"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -965,6 +979,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          email: string
+          id: string
+          name: string | null
+          updated_at: string | null
+          wallet: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          name?: string | null
+          updated_at?: string | null
+          wallet?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          name?: string | null
+          updated_at?: string | null
+          wallet?: string | null
+        }
+        Relationships: []
       }
       xp_transactions: {
         Row: {

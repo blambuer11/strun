@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { MapPin, Trophy, Users, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUserInfo } from "@/lib/zklogin";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -58,65 +59,49 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
     // First check zkLogin authentication
     const zkLoginAddress = localStorage.getItem("strun_sui_address");
     const zkLoginToken = localStorage.getItem("strun_id_token");
+    const userInfo = getCurrentUserInfo();
     
-    let profileId: string | null = null;
+    let userId: string | null = null;
     
-    // If zkLogin user, find or create profile
-    if (zkLoginAddress && zkLoginToken) {
-      // Try to find existing profile
-      let { data: profile } = await supabase
-        .from('profiles')
+    // If zkLogin user, find or create user
+    if (zkLoginAddress && zkLoginToken && userInfo) {
+      // Try to find existing user
+      let { data: user } = await supabase
+        .from('users')
         .select('id')
-        .eq('wallet_address', zkLoginAddress)
+        .eq('email', userInfo.email)
         .single();
       
-      // If no profile exists, create one for zkLogin user
-      if (!profile) {
-        const userIdForProfile = crypto.randomUUID();
-        const { data: newProfile, error } = await supabase
-          .from('profiles')
+      // If no user exists, create one for zkLogin user
+      if (!user) {
+        const { data: newUser, error } = await supabase
+          .from('users')
           .insert({
-            wallet_address: zkLoginAddress,
-            username: zkLoginAddress.slice(0, 8),
-            email: `${zkLoginAddress}@zklogin.local`,
-            user_id: userIdForProfile, // Use unique UUID for zkLogin users
+            email: userInfo.email,
+            name: userInfo.name || userInfo.email.split('@')[0],
+            wallet: zkLoginAddress,
+            avatar_url: userInfo.picture
           })
           .select()
           .single();
           
         if (error) {
-          console.error("Error creating profile:", error);
-          toast.error("Failed to create profile");
+          console.error("Error creating user:", error);
+          toast.error("Failed to create user");
           return;
         }
-        profile = newProfile;
+        user = newUser;
       }
       
-      if (profile) {
-        profileId = profile.id;
+      if (user) {
+        userId = user.id;
       }
     }
     
     // Fallback to Supabase auth if not zkLogin
-    if (!profileId) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error("Please login to create a group");
-        return;
-      }
-      
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("user_id", user.id)
-        .single();
-        
-      if (!profile) {
-        toast.error("Profile not found");
-        return;
-      }
-      
-      profileId = profile.id;
+    if (!userId) {
+      toast.error("Please login to create a group");
+      return;
     }
 
     setLoading(true);
@@ -143,13 +128,12 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
         .insert({
           name: formData.name,
           description: formData.description,
-          country: formData.country,
-          city: formData.city,
-          running_area: formData.runningArea,
+          location: { 
+            lat: parseFloat(formData.latitude) || 41.0082, 
+            lng: parseFloat(formData.longitude) || 28.9784 
+          },
           max_members: formData.maxMembers,
-          weekly_goal: formData.weeklyGoal * 1000, // Convert to meters
-          creator_id: profileId,
-          join_code: joinCode,
+          created_by: userId,
           is_public: true
         })
         .select()
@@ -162,7 +146,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
         .from("group_members")
         .insert({
           group_id: group.id,
-          user_id: profileId,
+          user_id: userId,
           role: "admin"
         });
 
