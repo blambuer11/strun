@@ -1123,10 +1123,10 @@ export type Database = {
         Row: {
           area: number | null
           avatar_url: string | null
-          created_at: string | null
           distance: number | null
           duration: number | null
           id: string | null
+          run_date: string | null
           user_name: string | null
           xp_earned: number | null
         }
@@ -1135,21 +1135,21 @@ export type Database = {
       public_users: {
         Row: {
           avatar_url: string | null
-          created_at: string | null
           id: string | null
+          joined_date: string | null
           name: string | null
         }
         Insert: {
           avatar_url?: string | null
-          created_at?: string | null
           id?: string | null
-          name?: string | null
+          joined_date?: never
+          name?: never
         }
         Update: {
           avatar_url?: string | null
-          created_at?: string | null
           id?: string | null
-          name?: string | null
+          joined_date?: never
+          name?: never
         }
         Relationships: []
       }
