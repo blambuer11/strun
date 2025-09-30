@@ -81,9 +81,9 @@ const mapOptions = {
   ]
 };
 
-// Google Maps API key
-// Note: In production, this should be restricted to your domain for security
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBLxwAmL1BCnMp0cLJ3kYZEWDRdWENl5vA';
+// Google Maps API key - SECURITY: Restrict this key in Google Cloud Console
+// Add allowed domains and API restrictions for production
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 
 export function GoogleMapView({
   isRunning,
@@ -262,7 +262,16 @@ export function GoogleMapView({
   };
 
   // Check if API key is configured
-  // No need to check since we have a valid key
+  if (!GOOGLE_MAPS_API_KEY) {
+    return (
+      <div className="flex items-center justify-center h-full bg-background">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">Google Maps API key not configured</p>
+          <p className="text-sm text-muted-foreground">Please add VITE_GOOGLE_MAPS_API_KEY to your environment variables</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LoadScript googleMapsApiKey={GOOGLE_MAPS_API_KEY}>
