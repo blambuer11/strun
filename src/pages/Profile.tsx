@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { isAuthenticated, logout, getCurrentUserInfo, getCurrentUserAddress } from "@/lib/zklogin";
 import { getOrCreateWalletForUser } from "@/lib/auto-wallet";
+import { Button } from "@/components/ui/button";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -131,6 +132,20 @@ const ProfilePage = () => {
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-muted-foreground">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If no user data, show message
+  if (!user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">No profile data available</p>
+          <Button onClick={() => navigate("/auth")} className="mt-4">
+            Go to Login
+          </Button>
         </div>
       </div>
     );
