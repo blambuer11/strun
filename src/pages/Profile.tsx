@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Profile as ProfileComponent } from "@/components/Profile";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { isAuthenticated, logout, getCurrentUserInfo } from "@/lib/zklogin";
+import { isAuthenticated, logout, getCurrentUserInfo, getCurrentUserAddress } from "@/lib/zklogin";
+import { getOrCreateWalletForUser } from "@/lib/auto-wallet";
 
 const ProfilePage = () => {
   const navigate = useNavigate();
@@ -16,41 +17,73 @@ const ProfilePage = () => {
 
   const loadProfile = async () => {
     try {
-      if (!isAuthenticated()) {
+      // Check both zkLogin and Supabase auth
+      const zkAuthenticated = isAuthenticated();
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      
+      if (!zkAuthenticated && !authUser) {
         navigate("/auth");
         return;
       }
 
-      // Get zkLogin info
+      // Get zkLogin info if available
       const zkInfo = getCurrentUserInfo();
-      
-      // Get Supabase user
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const zkAddress = getCurrentUserAddress();
       
       if (authUser) {
-        // Get profile data
-        const { data: profile } = await supabase
+        // Ensure profile exists or create it
+        let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('user_id', authUser.id)
-          .single();
+          .maybeSingle();
 
-        // Try to get wallet address from profile or auto-wallet
-        let walletAddress = zkInfo?.address || profile?.wallet_address;
+        // If profile doesn't exist, create it
+        if (!profile) {
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert({
+              user_id: authUser.id,
+              email: authUser.email,
+              username: authUser.email?.split('@')[0] || 'User',
+              wallet_address: zkAddress || null
+            })
+            .select()
+            .single();
+          
+          if (createError) {
+            console.error("Failed to create profile:", createError);
+            toast.error("Failed to create user profile");
+          } else {
+            profile = newProfile;
+          }
+        }
+
+        // Get or create wallet address
+        let walletAddress = zkAddress || profile?.wallet_address;
         
-        // If no wallet and email user, try to get from localStorage
+        // If no wallet, try to get or create auto-wallet for email users
         if (!walletAddress && authUser.email) {
-          const storedWallet = localStorage.getItem(`sui_wallet_${authUser.id}`);
-          if (storedWallet) {
-            const wallet = JSON.parse(storedWallet);
-            walletAddress = wallet.address;
+          try {
+            const wallet = await getOrCreateWalletForUser(authUser.id);
+            if (wallet) {
+              walletAddress = wallet.address;
+              
+              // Update profile with wallet address
+              await supabase
+                .from('profiles')
+                .update({ wallet_address: walletAddress })
+                .eq('user_id', authUser.id);
+            }
+          } catch (error) {
+            console.error("Failed to get/create wallet:", error);
           }
         }
 
         if (profile) {
           setUser({
-            name: profile.username || 'User',
-            address: walletAddress || '0x...',
+            name: profile.username || authUser.email?.split('@')[0] || 'User',
+            address: walletAddress || 'No wallet',
             stats: {
               totalRuns: profile.total_runs || 0,
               distance: profile.total_distance || 0,
@@ -62,6 +95,7 @@ const ProfilePage = () => {
       }
     } catch (error) {
       console.error("Failed to load profile:", error);
+      toast.error("Failed to load profile");
     } finally {
       setLoading(false);
     }
