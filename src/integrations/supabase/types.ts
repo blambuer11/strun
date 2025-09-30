@@ -1161,6 +1161,18 @@ export type Database = {
       }
     }
     Views: {
+      anonymous_leaderboard: {
+        Row: {
+          country: string | null
+          display_name: string | null
+          level: number | null
+          rank: number | null
+          total_distance: number | null
+          total_runs: number | null
+          xp: number | null
+        }
+        Relationships: []
+      }
       leaderboard_stats: {
         Row: {
           avatar_url: string | null
