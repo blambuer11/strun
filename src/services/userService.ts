@@ -8,22 +8,66 @@ export async function upsertUser() {
   if (!userInfo || !userInfo.email) return null;
   
   try {
-    const { data, error } = await supabase
+    // First try to find existing user
+    const { data: existingUser } = await supabase
       .from('users')
-      .upsert({
-        email: userInfo.email,
-        name: userInfo.name || userInfo.email.split('@')[0],
-        avatar_url: userInfo.picture,
-        wallet
-      }, {
-        onConflict: 'email'
-      })
-      .select()
+      .select('*')
+      .eq('email', userInfo.email)
       .single();
     
-    if (error) throw error;
-    return data;
-  } catch (error) {
+    if (existingUser) {
+      // Update user if needed
+      const { data, error } = await supabase
+        .from('users')
+        .update({
+          name: userInfo.name || userInfo.email.split('@')[0],
+          avatar_url: userInfo.picture,
+          wallet
+        })
+        .eq('email', userInfo.email)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } else {
+      // Create new user
+      const { data, error } = await supabase
+        .from('users')
+        .insert({
+          email: userInfo.email,
+          name: userInfo.name || userInfo.email.split('@')[0],
+          avatar_url: userInfo.picture,
+          wallet
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    }
+  } catch (error: any) {
+    // If error is because user doesn't exist, try to create
+    if (error?.code === 'PGRST116') {
+      try {
+        const { data, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            email: userInfo.email,
+            name: userInfo.name || userInfo.email.split('@')[0],
+            avatar_url: userInfo.picture,
+            wallet
+          })
+          .select()
+          .single();
+        
+        if (insertError) throw insertError;
+        return data;
+      } catch (insertErr) {
+        console.error('Error creating user:', insertErr);
+        return null;
+      }
+    }
     console.error('Error upserting user:', error);
     return null;
   }
