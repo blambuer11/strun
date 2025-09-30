@@ -242,21 +242,21 @@ export type Database = {
           id: string
           joined_at: string | null
           role: string | null
-          user_id: string | null
+          user_email: string | null
         }
         Insert: {
           group_id?: string | null
           id?: string
           joined_at?: string | null
           role?: string | null
-          user_id?: string | null
+          user_email?: string | null
         }
         Update: {
           group_id?: string | null
           id?: string
           joined_at?: string | null
           role?: string | null
-          user_id?: string | null
+          user_email?: string | null
         }
         Relationships: [
           {
@@ -267,69 +267,49 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "group_members_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "group_members_user_email_fkey"
+            columns: ["user_email"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedColumns: ["email"]
           },
         ]
       }
       groups: {
         Row: {
-          avatar_url: string | null
           created_at: string | null
-          created_by: string | null
           description: string | null
           id: string
-          is_public: boolean | null
-          location: Json | null
-          max_members: number | null
+          image_walrus_cid: string | null
+          location: Json
           name: string
+          owner_email: string
         }
         Insert: {
-          avatar_url?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           id?: string
-          is_public?: boolean | null
-          location?: Json | null
-          max_members?: number | null
+          image_walrus_cid?: string | null
+          location: Json
           name: string
+          owner_email: string
         }
         Update: {
-          avatar_url?: string | null
           created_at?: string | null
-          created_by?: string | null
           description?: string | null
           id?: string
-          is_public?: boolean | null
-          location?: Json | null
-          max_members?: number | null
+          image_walrus_cid?: string | null
+          location?: Json
           name?: string
+          owner_email?: string
         }
         Relationships: [
           {
-            foreignKeyName: "groups_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "public_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "groups_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: "groups_owner_email_fkey"
+            columns: ["owner_email"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedColumns: ["email"]
           },
         ]
       }
@@ -555,40 +535,27 @@ export type Database = {
       }
       posts: {
         Row: {
-          content: string
+          content: string | null
           created_at: string | null
           id: string
-          image_url: string | null
-          likes_count: number | null
           run_id: string | null
-          user_id: string | null
+          user_email: string
         }
         Insert: {
-          content: string
+          content?: string | null
           created_at?: string | null
           id?: string
-          image_url?: string | null
-          likes_count?: number | null
           run_id?: string | null
-          user_id?: string | null
+          user_email: string
         }
         Update: {
-          content?: string
+          content?: string | null
           created_at?: string | null
           id?: string
-          image_url?: string | null
-          likes_count?: number | null
           run_id?: string | null
-          user_id?: string | null
+          user_email?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "posts_run_id_fkey"
-            columns: ["run_id"]
-            isOneToOne: false
-            referencedRelation: "public_run_stats"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "posts_run_id_fkey"
             columns: ["run_id"]
@@ -597,18 +564,11 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "posts_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "posts_user_email_fkey"
+            columns: ["user_email"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedColumns: ["email"]
           },
         ]
       }
@@ -826,61 +786,51 @@ export type Database = {
       }
       runs: {
         Row: {
-          area: number | null
-          avg_pace: number | null
-          calories_burned: number | null
+          area_m2: number | null
+          bbox: Json | null
           created_at: string | null
-          distance: number | null
-          duration: number | null
+          date: string
           id: string
-          nft_metadata: Json | null
           nft_minted: boolean | null
+          nft_token_id: string | null
+          polygon: Json | null
           route: Json
-          user_id: string | null
-          xp_earned: number | null
+          user_email: string
+          walrus_cid: string | null
         }
         Insert: {
-          area?: number | null
-          avg_pace?: number | null
-          calories_burned?: number | null
+          area_m2?: number | null
+          bbox?: Json | null
           created_at?: string | null
-          distance?: number | null
-          duration?: number | null
+          date?: string
           id?: string
-          nft_metadata?: Json | null
           nft_minted?: boolean | null
+          nft_token_id?: string | null
+          polygon?: Json | null
           route: Json
-          user_id?: string | null
-          xp_earned?: number | null
+          user_email: string
+          walrus_cid?: string | null
         }
         Update: {
-          area?: number | null
-          avg_pace?: number | null
-          calories_burned?: number | null
+          area_m2?: number | null
+          bbox?: Json | null
           created_at?: string | null
-          distance?: number | null
-          duration?: number | null
+          date?: string
           id?: string
-          nft_metadata?: Json | null
           nft_minted?: boolean | null
+          nft_token_id?: string | null
+          polygon?: Json | null
           route?: Json
-          user_id?: string | null
-          xp_earned?: number | null
+          user_email?: string
+          walrus_cid?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "runs_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "runs_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "runs_user_email_fkey"
+            columns: ["user_email"]
             isOneToOne: false
             referencedRelation: "users"
-            referencedColumns: ["id"]
+            referencedColumns: ["email"]
           },
         ]
       }
@@ -1227,40 +1177,6 @@ export type Database = {
           total_runs?: number | null
           username?: string | null
           xp?: number | null
-        }
-        Relationships: []
-      }
-      public_run_stats: {
-        Row: {
-          area: number | null
-          avatar_url: string | null
-          distance: number | null
-          duration: number | null
-          id: string | null
-          run_date: string | null
-          user_name: string | null
-          xp_earned: number | null
-        }
-        Relationships: []
-      }
-      public_users: {
-        Row: {
-          avatar_url: string | null
-          id: string | null
-          joined_date: string | null
-          name: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          id?: string | null
-          joined_date?: never
-          name?: never
-        }
-        Update: {
-          avatar_url?: string | null
-          id?: string | null
-          joined_date?: never
-          name?: never
         }
         Relationships: []
       }

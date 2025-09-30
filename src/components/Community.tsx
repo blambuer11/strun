@@ -214,30 +214,18 @@ export default function Community() {
         return;
       }
 
-      let imageUrl = null;
-      if (selectedImage) {
-        const fileExt = selectedImage.name.split('.').pop();
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`;
-        
-        const { error: uploadError, data } = await supabase.storage
-          .from('community')
-          .upload(fileName, selectedImage);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('community')
-          .getPublicUrl(fileName);
-        
-        imageUrl = publicUrl;
+      // Use zkLogin email for posts
+      const userInfo = getCurrentUserInfo();
+      if (!userInfo?.email) {
+        toast.error("Please login to post");
+        return;
       }
 
       const { error } = await supabase
         .from('posts')
         .insert({
-          user_id: user.id,
-          content: newPost,
-          image_url: imageUrl
+          user_email: userInfo.email,
+          content: newPost
         });
 
       if (error) throw error;

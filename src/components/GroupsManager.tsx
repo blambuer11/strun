@@ -8,6 +8,7 @@ import { Users, Plus, Search, Globe, MapPin, Trophy, Calendar, Target, TrendingU
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import CreateGroupModal from "./CreateGroupModal";
+import { getCurrentUserInfo } from "@/lib/zklogin";
 
 interface GroupsManagerProps {
   userId?: string;
@@ -37,17 +38,13 @@ export default function GroupsManager({ userId }: GroupsManagerProps) {
 
       if (userId) {
         // Get user's profile ID
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("id")
-          .eq("user_id", userId)
-          .single();
-        
-        if (profile) {
+        // Get user email for group membership
+        const userInfo = getCurrentUserInfo();
+        if (userInfo?.email) {
           const { data: memberData } = await supabase
             .from("group_members")
             .select("group_id")
-            .eq("user_id", profile.id);
+            .eq("user_email", userInfo.email);
           
           if (memberData) {
             setMyGroups(memberData.map(m => m.group_id));

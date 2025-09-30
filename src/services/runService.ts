@@ -1,21 +1,19 @@
 import { supabase } from "@/integrations/supabase/client";
-import { getCurrentUser } from "./userService";
+import { getCurrentUserInfo } from "@/lib/zklogin";
 import * as turf from "@turf/turf";
 
 export interface RunData {
   route: [number, number][]; // [lng, lat] pairs
-  distance: number; // meters
-  duration: number; // seconds
-  avgPace: number; // min/km
-  calories: number;
-  xpEarned: number;
+  polygon?: any; // GeoJSON polygon
+  bbox?: { lonMin: number; latMin: number; lonMax: number; latMax: number };
   area?: number; // square meters
+  walrusCid?: string;
 }
 
 export async function saveRun(runData: RunData) {
-  const user = await getCurrentUser();
+  const userInfo = getCurrentUserInfo();
   
-  if (!user) {
+  if (!userInfo?.email) {
     console.error('No user found, cannot save run');
     return null;
   }
@@ -27,27 +25,36 @@ export async function saveRun(runData: RunData) {
       coordinates: runData.route
     };
     
-    // Calculate area if route is long enough
-    let area = 0;
-    if (runData.route.length >= 3) {
+    // Calculate polygon and area if route is long enough
+    let polygon = runData.polygon;
+    let area = runData.area || 0;
+    let bbox = runData.bbox;
+    
+    if (!polygon && runData.route.length >= 3) {
       const line = turf.lineString(runData.route);
       const buffered = turf.buffer(line, 10, { units: "meters" });
       if (buffered) {
+        polygon = buffered;
         area = turf.area(buffered);
+        const bounds = turf.bbox(buffered);
+        bbox = {
+          lonMin: bounds[0],
+          latMin: bounds[1],
+          lonMax: bounds[2],
+          latMax: bounds[3]
+        };
       }
     }
     
     const { data, error } = await supabase
       .from('runs')
       .insert({
-        user_id: user.id,
+        user_email: userInfo.email,
         route: routeGeoJSON,
-        area: area,
-        distance: runData.distance,
-        duration: runData.duration,
-        avg_pace: runData.avgPace,
-        calories_burned: runData.calories,
-        xp_earned: runData.xpEarned
+        polygon: polygon,
+        bbox: bbox,
+        area_m2: area,
+        walrus_cid: runData.walrusCid
       })
       .select()
       .single();
@@ -61,15 +68,15 @@ export async function saveRun(runData: RunData) {
   }
 }
 
-export async function getUserRuns(userId?: string) {
+export async function getUserRuns(userEmail?: string) {
   try {
     let query = supabase
       .from('runs')
       .select('*')
       .order('created_at', { ascending: false });
     
-    if (userId) {
-      query = query.eq('user_id', userId);
+    if (userEmail) {
+      query = query.eq('user_email', userEmail);
     }
     
     const { data, error } = await query;
@@ -91,13 +98,12 @@ export async function getTodayRuns() {
       .from('runs')
       .select(`
         *,
-        users!runs_user_id_fkey (
+        users!runs_user_email_fkey (
           name,
           avatar_url
         )
       `)
-      .gte('created_at', today + 'T00:00:00')
-      .lt('created_at', today + 'T23:59:59');
+      .eq('date', today);
     
     if (error) throw error;
     

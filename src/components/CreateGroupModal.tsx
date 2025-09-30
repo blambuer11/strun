@@ -92,7 +92,13 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
         }
       };
 
-      // Create group
+      // Create group with email as owner
+      const userInfo = getCurrentUserInfo();
+      if (!userInfo?.email) {
+        toast.error("Please login to create a group");
+        return;
+      }
+
       const { data: group, error } = await supabase
         .from("groups")
         .insert({
@@ -102,9 +108,7 @@ export default function CreateGroupModal({ open, onClose, userId, onGroupCreated
             lat: parseFloat(formData.latitude) || 41.0082, 
             lng: parseFloat(formData.longitude) || 28.9784 
           },
-          max_members: formData.maxMembers,
-          created_by: user.id,
-          is_public: true
+          owner_email: userInfo.email
         })
         .select()
         .single();

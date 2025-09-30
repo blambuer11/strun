@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 import { Wallet as WalletIcon, Play, MapPin, User, Home as HomeIcon, Trophy, Settings, LogOut, Users } from "lucide-react";
 import strunLogo from "@/assets/strun-logo-new.png";
 import { loginWithGoogle, handleOAuthCallback, isAuthenticated, logout, getCurrentUserAddress, getCurrentUserInfo, initService } from "@/lib/zklogin";
+import { supabase } from "@/integrations/supabase/client";
 import Dashboard from "./components/Dashboard";
 import { MapView } from "./components/MapView";
 import { Wallet } from "./components/Wallet";
@@ -34,45 +35,76 @@ const App = () => {
   });
 
   useEffect(() => {
-    const checkAuth = async () => {
+    const init = async () => {
       try {
-        // Check for OAuth callback FIRST
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const queryParams = new URLSearchParams(window.location.search);
-        const idToken = hashParams.get('id_token') || queryParams.get('id_token');
+        // 1) If URL has id_token (OAuth redirect), extract and store
+        const paramsHash = window.location.hash || window.location.search;
+        let idToken = null;
         
+        if (paramsHash.includes('id_token=')) {
+          const params = new URLSearchParams(paramsHash.replace('#','').replace('?',''));
+          idToken = params.get('id_token');
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
+        } else {
+          // Check if token saved in localStorage
+          idToken = localStorage.getItem('strun_id_token');
+        }
+
         if (idToken) {
-          console.log("[App] Processing OAuth callback");
-          // Don't call initService here - just handle the callback
+          // Store token locally
+          localStorage.setItem('strun_id_token', idToken);
+          localStorage.setItem('strun_login_state', 'authenticated');
+          
+          // Handle zkLogin callback to get address
           const address = await handleOAuthCallback();
           if (address) {
-            setIsLoggedIn(true);
-            toast.success("Successfully logged in with zkLogin!");
-            // URL cleanup is handled in handleOAuthCallback
+            // Get user info
+            const userInfo = getCurrentUserInfo();
+            if (userInfo) {
+              localStorage.setItem('strun_user', JSON.stringify(userInfo));
+              
+              // Upsert user to our database
+              const { data: user, error } = await supabase
+                .from('users')
+                .upsert({
+                  email: userInfo.email,
+                  name: userInfo.name,
+                  avatar_url: userInfo.picture,
+                  wallet: address
+                }, { onConflict: 'email' })
+                .select()
+                .single();
+              
+              if (!error && user) {
+                setIsLoggedIn(true);
+                toast.success("Successfully logged in!");
+              }
+            }
           } else {
-            // If callback failed, initialize service for retry
-            await initService();
+            // If callback failed, remove saved token
+            localStorage.removeItem('strun_id_token');
+            localStorage.setItem('strun_login_state', 'idle');
           }
         } else {
           // Check if already authenticated
           const authenticated = isAuthenticated();
-          console.log("[App] Authentication check:", authenticated);
-          
           if (authenticated) {
             setIsLoggedIn(true);
           } else {
-            // Only initialize if not authenticated and not handling callback
+            // Initialize service for new login
             await initService();
           }
         }
       } catch (error) {
-        console.error('[App] Auth check error:', error);
+        console.error('[App] Init error:', error);
+        localStorage.setItem('strun_login_state', 'idle');
       } finally {
         setLoading(false);
       }
     };
     
-    checkAuth();
+    init().catch(console.error);
   }, []);
 
   const handleZkLogin = async () => {

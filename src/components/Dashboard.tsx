@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import GroupsManager from "./GroupsManager";
+import { getCurrentUserInfo } from "@/lib/zklogin";
 
 
 interface DashboardProps {
@@ -57,35 +58,38 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
         setProfile(profileData);
       }
 
-      // Load recent runs
-      const { data: runsData } = await supabase
-        .from("runs")
-        .select("*")
-        .eq("user_id", profileData?.id)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      // Load recent runs with email
+      const userInfo = getCurrentUserInfo();
+      if (userInfo?.email) {
+        const { data: runsData } = await supabase
+          .from("runs")
+          .select("*")
+          .eq("user_email", userInfo.email)
+          .order("created_at", { ascending: false })
+          .limit(5);
 
-      if (runsData) {
-        setRecentRuns(runsData);
-        
-        // Calculate stats
-        const totalDistance = runsData.reduce((sum, run) => sum + (run.distance || 0), 0);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const weeklyRuns = runsData.filter(run => new Date(run.created_at) > weekAgo);
-        const weeklyDistance = weeklyRuns.reduce((sum, run) => sum + (run.distance || 0), 0);
-        const bestRun = Math.max(...runsData.map(run => run.distance || 0));
+        if (runsData) {
+          setRecentRuns(runsData);
+          
+          // Calculate stats - using area_m2 instead of distance
+          const totalArea = runsData.reduce((sum, run) => sum + (run.area_m2 || 0), 0);
+          const weekAgo = new Date();
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          const weeklyRuns = runsData.filter(run => new Date(run.created_at) > weekAgo);
+          const weeklyArea = weeklyRuns.reduce((sum, run) => sum + (run.area_m2 || 0), 0);
+          const bestRun = Math.max(...runsData.map(run => run.area_m2 || 0));
 
-        setStats({
-          totalRuns: runsData.length,
-          totalDistance,
-          totalArea: profileData?.total_area || 0,
-          weeklyDistance,
-          bestRun,
-          averagePace: 6.5, // Calculate from runs
-          currentStreak: 3, // Calculate from runs
-          longestStreak: 7 // Calculate from runs
-        });
+          setStats({
+            totalRuns: runsData.length,
+            totalDistance: Math.round(totalArea / 1000), // Convert to km² for display
+            totalArea: totalArea,
+            weeklyDistance: Math.round(weeklyArea / 1000),
+            bestRun: Math.round(bestRun / 1000),
+            averagePace: 6.5, // Calculate from runs
+            currentStreak: 3, // Calculate from runs
+            longestStreak: 7 // Calculate from runs
+          });
+        }
       }
 
       // Load user's groups
@@ -93,9 +97,9 @@ export default function Dashboard({ userId, onStartRun }: DashboardProps) {
         .from("group_members")
         .select(`
           *,
-          groups (*)
+          groups:group_id (*)
         `)
-        .eq("user_id", profileData?.id)
+        .eq("user_email", userInfo?.email || '')
         .limit(3);
 
       if (groupsData) {
