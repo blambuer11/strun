@@ -17,13 +17,15 @@ const ProfilePage = () => {
 
   const loadProfile = async () => {
     try {
-      // Check both zkLogin and Supabase auth
-      const zkAuthenticated = isAuthenticated();
+      // Get Supabase user first
       const { data: { user: authUser } } = await supabase.auth.getUser();
       
-      if (!zkAuthenticated && !authUser) {
-        navigate("/auth");
-        return;
+      if (!authUser) {
+        // Check zkLogin as fallback
+        if (!isAuthenticated()) {
+          navigate("/auth");
+          return;
+        }
       }
 
       // Get zkLogin info if available
@@ -31,7 +33,7 @@ const ProfilePage = () => {
       const zkAddress = getCurrentUserAddress();
       
       if (authUser) {
-        // Ensure profile exists or create it
+        // Check if profile exists
         let { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -39,23 +41,34 @@ const ProfilePage = () => {
           .maybeSingle();
 
         // If profile doesn't exist, create it
-        if (!profile) {
+        if (!profile && authUser.email) {
+          console.log("Creating new profile for user:", authUser.id);
+          
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert({
               user_id: authUser.id,
               email: authUser.email,
-              username: authUser.email?.split('@')[0] || 'User',
-              wallet_address: zkAddress || null
+              username: authUser.email.split('@')[0] || 'User',
+              wallet_address: zkAddress || null,
+              level: 1,
+              xp: 0,
+              total_runs: 0,
+              total_distance: 0,
+              total_area: 0,
+              referral_count: 0,
+              referral_xp_earned: 0
             })
             .select()
             .single();
           
           if (createError) {
-            console.error("Failed to create profile:", createError);
-            toast.error("Failed to create user profile");
+            console.error("Profile creation error:", createError);
+            toast.error("Profil oluşturulamadı: " + createError.message);
+            return;
           } else {
             profile = newProfile;
+            toast.success("Profil başarıyla oluşturuldu!");
           }
         }
 
@@ -63,27 +76,31 @@ const ProfilePage = () => {
         let walletAddress = zkAddress || profile?.wallet_address;
         
         // If no wallet, try to get or create auto-wallet for email users
-        if (!walletAddress && authUser.email) {
+        if (!walletAddress && authUser.email && authUser.id) {
           try {
+            console.log("Getting/creating wallet for user:", authUser.id);
             const wallet = await getOrCreateWalletForUser(authUser.id);
             if (wallet) {
               walletAddress = wallet.address;
+              console.log("Wallet address obtained:", walletAddress);
               
               // Update profile with wallet address
-              await supabase
-                .from('profiles')
-                .update({ wallet_address: walletAddress })
-                .eq('user_id', authUser.id);
+              if (profile) {
+                await supabase
+                  .from('profiles')
+                  .update({ wallet_address: walletAddress })
+                  .eq('user_id', authUser.id);
+              }
             }
           } catch (error) {
-            console.error("Failed to get/create wallet:", error);
+            console.error("Wallet creation/retrieval error:", error);
           }
         }
 
         if (profile) {
           setUser({
             name: profile.username || authUser.email?.split('@')[0] || 'User',
-            address: walletAddress || 'No wallet',
+            address: walletAddress || 'Wallet yok',
             stats: {
               totalRuns: profile.total_runs || 0,
               distance: profile.total_distance || 0,
@@ -94,8 +111,8 @@ const ProfilePage = () => {
         }
       }
     } catch (error) {
-      console.error("Failed to load profile:", error);
-      toast.error("Failed to load profile");
+      console.error("Profile loading error:", error);
+      toast.error("Profil yüklenemedi");
     } finally {
       setLoading(false);
     }
